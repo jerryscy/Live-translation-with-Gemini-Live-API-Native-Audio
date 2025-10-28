@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+numpy==2.2.4
+torch
+torchaudio
+onnxruntime
+silero-vad
+google-cloud-aiplatform
+python-dotenv
+google-genai

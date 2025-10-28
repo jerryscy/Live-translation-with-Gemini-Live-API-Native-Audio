@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-time Transcription and Translation</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        #chat-container {
+            flex-grow: 1;
+            width: 90%;
+            max-width: 800px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            position: relative;
+        }
+        .user-message {
+            background-color: #dcf8c6;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .bot-message {
+            background-color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .message-text {
+            margin-bottom: 10px;
+        }
+        audio {
+            width: 100%;
+            outline: none;
+        }
+        #controls {
+            padding: 20px;
+            background-color: #fff;
+            width: 100%;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+        }
+        button:disabled {
+            background-color: #ccc;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Transcription and Translation</h1>
+    <p>Please speak in English for the best results.</p>
+    <div id="chat-container"></div>
+    <div id="controls">
+        <button id="startBtn">Start Recording</button>
+        <button id="stopBtn" disabled>Stop Recording</button>
+        <button id="autoplayBtn">Autoplay: ON</button>
+        <label for="language">Translate to:</label>
+        <select id="language" onchange="updateLanguage()">
+            <option value="Arabic (Generic) (ar-XA)">Arabic (Generic)</option>
+            <option value="Bengali (India) (bn-IN)">Bengali (India)</option>
+            <option value="Danish (Denmark) (da-DK)">Danish (Denmark)</option>
+            <option value="Dutch (Belgium) (nl-BE)">Dutch (Belgium)</option>
+            <option value="Dutch (Netherlands) (nl-NL)">Dutch (Netherlands)</option>
+            <option value="English (Australia) (en-AU)">English (Australia)</option>
+            <option value="English (India) (en-IN)">English (India)</option>
+            <option value="English (United Kingdom) (en-GB)">English (United Kingdom)</option>
+            <option value="English (United States) (en-US)">English (United States)</option>
+            <option value="Finnish (Finland) (fi-FI)">Finnish (Finland)</option>
+            <option value="French (Canada) (fr-CA)">French (Canada)</option>
+            <option value="French (France) (fr-FR)">French (France)</option>
+            <option value="German (Germany) (de-DE)">German (Germany)</option>
+            <option value="Gujarati (India) (gu-IN)">Gujarati (India)</option>
+            <option value="Hindi (India) (hi-IN)">Hindi (India)</option>
+            <option value="Indonesian (Indonesia) (id-ID)">Indonesian (Indonesia)</option>
+            <option value="Italian (Italy) (it-IT)">Italian (Italy)</option>
+            <option value="Japanese (Japan) (ja-JP)">Japanese (Japan)</option>
+            <option value="Kannada (India) (kn-IN)">Kannada (India)</option>
+            <option value="Korean (South Korea) (ko-KR)">Korean (South Korea)</option>
+            <option value="Malayalam (India) (ml-IN)">Malayalam (India)</option>
+            <option selected="selected" value="Mandarin Chinese (China) (cmn-CN)">Mandarin Chinese (China)</option>
+            <option value="Marathi (India) (mr-IN)">Marathi (India)</option>
+            <option value="Norwegian Bokmål (Norway) (nb-NO)">Norwegian Bokmål (Norway)</option>
+            <option value="Polish (Poland) (pl-PL)">Polish (Poland)</option>
+            <option value="Portuguese (Brazil) (pt-BR)">Portuguese (Brazil)</option>
+            <option value="Russian (Russia) (ru-RU)">Russian (Russia)</option>
+            <option value="Spanish (Spain) (es-ES)">Spanish (Spain)</option>
+            <option value="Spanish (United States) (es-US)">Spanish (United States)</option>
+            <option value="Swahili (Kenya) (sw-KE)">Swahili (Kenya)</option>
+            <option value="Swedish (Sweden) (sv-SE)">Swedish (Sweden)</option>
+            <option value="Tamil (India) (ta-IN)">Tamil (India)</option>
+            <option value="Telugu (India) (te-IN)">Telugu (India)</option>
+            <option value="Thai (Thailand) (th-TH)">Thai (Thailand)</option>
+            <option value="Turkish (Turkey) (tr-TR)">Turkish (Turkey)</option>
+            <option value="Ukrainian (Ukraine) (uk-UA)">Ukrainian (Ukraine)</option>
+            <option value="Urdu (India) (ur-IN)">Urdu (India)</option>
+            <option value="Vietnamese (Vietnam) (vi-VN)">Vietnamese (Vietnam)</option>
+        </select>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const chatContainer = document.getElementById('chat-container');
+        const autoplayBtn = document.getElementById('autoplayBtn');
+
+        let socket;
+        let audioContext;
+        let audioWorkletNode;
+        let input;
+        let globalStream;
+        let recordedChunks = [];
+        let userMessageDiv;
+        let botMessageDiv;
+        let audioQueue = [];
+        let isPlaying = false;
+        let autoplayEnabled = true;
+        let audioPlayer = new Audio();
+
+        autoplayBtn.addEventListener('click', () => {
+            autoplayEnabled = !autoplayEnabled;
+            autoplayBtn.textContent = `Autoplay: ${autoplayEnabled ? 'ON' : 'OFF'}`;
+            if (autoplayEnabled) {
+                // Clear the audio queue to prevent playing backlogged audio
+                audioQueue = [];
+            }
+        });
+
+        audioPlayer.addEventListener('ended', () => {
+            isPlaying = false;
+            playNextInQueue();
+        });
+
+        function playNextInQueue() {
+            if (audioQueue.length > 0 && !isPlaying && autoplayEnabled) {
+                isPlaying = true;
+                const audioURL = audioQueue.shift();
+                audioPlayer.src = audioURL;
+                const playPromise = audioPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.error("Audio playback failed, requeueing:", error);
+                        isPlaying = false;
+                        audioQueue.unshift(audioURL);
+                    });
+                }
+            }
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function pcmToWav(pcmData, sampleRate, numChannels) {
+            const header = new ArrayBuffer(44);
+            const view = new DataView(header);
+            const pcmLength = pcmData.byteLength;
+            const totalLength = pcmLength + 44;
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, totalLength - 8, true);
+            writeString(view, 8, 'WAVE');
+
+            // "fmt " sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Sub-chunk size (16 for PCM)
+            view.setUint16(20, 1, true); // Audio format (1 for PCM)
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * 2, true); // Byte rate
+            view.setUint16(32, numChannels * 2, true); // Block align
+            view.setUint16(34, 16, true); // Bits per sample
+
+            // "data" sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmLength, true);
+
+            const wavBytes = new Uint8Array(totalLength);
+            wavBytes.set(new Uint8Array(header), 0);
+            wavBytes.set(new Uint8Array(pcmData), 44);
+
+            return new Blob([wavBytes], { type: 'audio/wav' });
+        }
+
+        const connectWebSocket = () => {
+            socket = new WebSocket('ws://localhost:8000/ws');
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+            };
+
+            socket.onmessage = (event) => {
+                if (event.data instanceof Blob) {
+                    event.data.arrayBuffer().then(buffer => {
+                        const blob = pcmToWav(buffer, 24000, 1);
+                        const audioURL = URL.createObjectURL(blob);
+                        audioQueue.push(audioURL);
+                        playNextInQueue();
+                    });
+                } else {
+                    const data = JSON.parse(event.data);
+                    if (data.input_transcription) {
+                        if (!userMessageDiv || botMessageDiv) {
+                            userMessageDiv = createMessageDiv('user-message');
+                            botMessageDiv = null;
+                        }
+                        const textNode = userMessageDiv.querySelector('.message-text');
+                        textNode.innerHTML += data.input_transcription;
+                    }
+                    if (data.output_transcription) {
+                        if (!botMessageDiv || userMessageDiv) {
+                            botMessageDiv = createMessageDiv('bot-message');
+                            userMessageDiv = null;
+                        }
+                        const textNode = botMessageDiv.querySelector('.message-text');
+                        textNode.innerHTML += data.output_transcription;
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        };
+
+        const createMessageDiv = (className) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', className);
+            const textDiv = document.createElement('div');
+            textDiv.classList.add('message-text');
+            messageDiv.appendChild(textDiv);
+            chatContainer.appendChild(messageDiv);
+            return messageDiv;
+        };
+        
+        const startRecording = async () => {
+            recordedChunks = [];
+            userMessageDiv = null;
+            botMessageDiv = null;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                globalStream = stream;
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+                
+                await audioContext.audioWorklet.addModule('/static/audio-processor.js');
+
+                audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+                
+                audioWorkletNode.port.onmessage = (event) => {
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(event.data);
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                input = audioContext.createMediaStreamSource(stream);
+                input.connect(audioWorkletNode);
+                audioWorkletNode.connect(audioContext.destination);
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } catch (err) {
+                console.error('Error starting recording:', err);
+            }
+        };
+
+        const stopRecording = () => {
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioWorkletNode) {
+                audioWorkletNode.disconnect();
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (input) {
+                input.disconnect();
+            }
+
+            if (userMessageDiv && recordedChunks.length > 0) {
+                const totalLength = recordedChunks.reduce((acc, value) => acc + value.byteLength, 0);
+                const combined = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of recordedChunks) {
+                    combined.set(new Uint8Array(chunk), offset);
+                    offset += chunk.byteLength;
+                }
+
+                const blob = pcmToWav(combined.buffer, 16000, 1);
+                const audioURL = URL.createObjectURL(blob);
+                const audioPlayer = document.createElement('audio');
+                audioPlayer.controls = true;
+                audioPlayer.src = audioURL;
+                userMessageDiv.appendChild(audioPlayer);
+            }
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        };
+
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+
+        connectWebSocket();
+
+        const updateLanguage = () => {
+            const language = document.getElementById('language').value;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ target_language: language }));
+            }
+        };
+    </script>
+</body>
+</html>
