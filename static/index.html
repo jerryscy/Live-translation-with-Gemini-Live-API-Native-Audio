@@ -1,17 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Real-time Transcription and Translation</title>
+    <title>Demo</title>
     <style>
         body {
             font-family: sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
             height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
+            overflow: hidden;
         }
+        /* ---------- Main content column ---------- */
+        #main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* ---------- Right-side Navigation Sidebar ---------- */
+        #nav-bar {
+            width: 220px;
+            min-width: 220px;
+            background-color: #2c3e50;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 20px 16px;
+            box-sizing: border-box;
+            box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+            gap: 16px;
+            overflow-y: auto;
+        }
+        #nav-bar .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #34495e;
+        }
+        #nav-bar .nav-section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #95a5a6;
+            margin-bottom: 4px;
+        }
+        #nav-bar select,
+        #nav-bar button.nav-btn {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        #nav-bar select {
+            background-color: #fff;
+            color: #2c3e50;
+        }
+        #nav-bar button.nav-btn {
+            background-color: #5bc0de;
+            color: #fff;
+        }
+        #nav-bar .status-pill {
+            background-color: #34495e;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-align: center;
+        }
+        #nav-bar .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #34495e;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        #nav-bar .ws-status .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #95a5a6;
+            box-shadow: 0 0 4px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #nav-bar .ws-status.connected .status-dot {
+            background-color: #2ecc71;
+            box-shadow: 0 0 6px #2ecc71;
+        }
+        #nav-bar .ws-status.disconnected .status-dot {
+            background-color: #e74c3c;
+            box-shadow: 0 0 6px #e74c3c;
+        }
+        #nav-bar .ws-status.connecting .status-dot {
+            background-color: #f1c40f;
+            box-shadow: 0 0 6px #f1c40f;
+            animation: pulse 1.2s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%   { opacity: 1; }
+            50%  { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        /* ---------- Chat ---------- */
         #chat-container {
             flex-grow: 1;
             width: 90%;
@@ -21,6 +121,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            align-self: center;
         }
         .message {
             display: flex;
@@ -28,7 +129,6 @@
             max-width: 70%;
             padding: 10px 15px;
             border-radius: 15px;
-            position: relative;
         }
         .user-message {
             background-color: #dcf8c6;
@@ -47,10 +147,23 @@
             width: 100%;
             outline: none;
         }
-        #controls {
-            padding: 20px;
+        /* ---------- Language & recording controls ---------- */
+        #language-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
             background-color: #fff;
             width: 100%;
+            box-sizing: border-box;
+        }
+        #controls {
+            padding: 16px 20px;
+            background-color: #fff;
+            width: 100%;
+            box-sizing: border-box;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
             display: flex;
             justify-content: center;
@@ -70,67 +183,277 @@
             background-color: #ccc;
         }
         select {
-            padding: 10px;
-            font-size: 16px;
+            padding: 8px;
+            font-size: 15px;
         }
     </style>
 </head>
 <body>
-    <h1>Real-time Transcription and Translation</h1>
-    <p>Please speak in English for the best results.</p>
-    <div id="chat-container"></div>
-    <div id="controls">
-        <button id="startBtn">Start Recording</button>
-        <button id="stopBtn" disabled>Stop Recording</button>
-        <button id="autoplayBtn">Autoplay: ON</button>
-        <label for="language">Translate to:</label>
-        <select id="language" onchange="updateLanguage()">
-            <option value="Arabic (Generic) (ar-XA)">Arabic (Generic)</option>
-            <option value="Bengali (India) (bn-IN)">Bengali (India)</option>
-            <option value="Danish (Denmark) (da-DK)">Danish (Denmark)</option>
-            <option value="Dutch (Belgium) (nl-BE)">Dutch (Belgium)</option>
-            <option value="Dutch (Netherlands) (nl-NL)">Dutch (Netherlands)</option>
-            <option value="English (Australia) (en-AU)">English (Australia)</option>
-            <option value="English (India) (en-IN)">English (India)</option>
-            <option value="English (United Kingdom) (en-GB)">English (United Kingdom)</option>
-            <option value="English (United States) (en-US)">English (United States)</option>
-            <option value="Finnish (Finland) (fi-FI)">Finnish (Finland)</option>
-            <option value="French (Canada) (fr-CA)">French (Canada)</option>
-            <option value="French (France) (fr-FR)">French (France)</option>
-            <option value="German (Germany) (de-DE)">German (Germany)</option>
-            <option value="Gujarati (India) (gu-IN)">Gujarati (India)</option>
-            <option value="Hindi (India) (hi-IN)">Hindi (India)</option>
-            <option value="Indonesian (Indonesia) (id-ID)">Indonesian (Indonesia)</option>
-            <option value="Italian (Italy) (it-IT)">Italian (Italy)</option>
-            <option value="Japanese (Japan) (ja-JP)">Japanese (Japan)</option>
-            <option value="Kannada (India) (kn-IN)">Kannada (India)</option>
-            <option value="Korean (South Korea) (ko-KR)">Korean (South Korea)</option>
-            <option value="Malayalam (India) (ml-IN)">Malayalam (India)</option>
-            <option selected="selected" value="Mandarin Chinese (China) (cmn-CN)">Mandarin Chinese (China)</option>
-            <option value="Marathi (India) (mr-IN)">Marathi (India)</option>
-            <option value="Norwegian Bokmål (Norway) (nb-NO)">Norwegian Bokmål (Norway)</option>
-            <option value="Polish (Poland) (pl-PL)">Polish (Poland)</option>
-            <option value="Portuguese (Brazil) (pt-BR)">Portuguese (Brazil)</option>
-            <option value="Russian (Russia) (ru-RU)">Russian (Russia)</option>
-            <option value="Spanish (Spain) (es-ES)">Spanish (Spain)</option>
-            <option value="Spanish (United States) (es-US)">Spanish (United States)</option>
-            <option value="Swahili (Kenya) (sw-KE)">Swahili (Kenya)</option>
-            <option value="Swedish (Sweden) (sv-SE)">Swedish (Sweden)</option>
-            <option value="Tamil (India) (ta-IN)">Tamil (India)</option>
-            <option value="Telugu (India) (te-IN)">Telugu (India)</option>
-            <option value="Thai (Thailand) (th-TH)">Thai (Thailand)</option>
-            <option value="Turkish (Turkey) (tr-TR)">Turkish (Turkey)</option>
-            <option value="Ukrainian (Ukraine) (uk-UA)">Ukrainian (Ukraine)</option>
-            <option value="Urdu (India) (ur-IN)">Urdu (India)</option>
-            <option value="Vietnamese (Vietnam) (vi-VN)">Vietnamese (Vietnam)</option>
-        </select>
+    <!-- ---------- Main content ---------- -->
+    <div id="main-content">
+        <h1>Demo</h1>
+        <div id="chat-container"></div>
+        <div id="controls">
+            <button id="startBtn">Start Recording</button>
+            <button id="stopBtn" disabled>Stop Recording</button>
+        </div>
     </div>
+
+    <!-- ---------- Right-side Navigation Sidebar ---------- -->
+    <nav id="nav-bar">
+        <div class="nav-title">⚙ Settings</div>
+
+        <div>
+            <div class="nav-section-label">Connection - WebSocket</div>
+            <div class="ws-status disconnected" id="wsStatus" title="Browser ↔ server WebSocket connection status">
+                <span class="status-dot"></span>
+                <span id="wsStatusText">Disconnected</span>
+            </div>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Connection - Live API</div>
+            <div class="ws-status disconnected" id="liveApiStatus" title="Server ↔ Gemini Live API connection status">
+                <span class="status-dot"></span>
+                <span id="liveApiStatusText">Disconnected</span>
+            </div>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Language A</div>
+            <select id="languageA">
+                <!-- Generally Available (GA) Languages -->
+                <option value="ca-ES">Catalan (Spain)</option>
+                <option value="cmn-Hans-CN">Chinese (Simplified, China)</option>
+                <option value="hr-HR">Croatian (Croatia)</option>
+                <option value="da-DK">Danish (Denmark)</option>
+                <option value="nl-NL">Dutch (Netherlands)</option>
+                <option value="en-AU">English (Australia)</option>
+                <option value="en-IN">English (India)</option>
+                <option value="en-GB">English (United Kingdom)</option>
+                <option value="en-US" selected>English (United States)</option>
+                <option value="fi-FI">Finnish (Finland)</option>
+                <option value="fr-CA">French (Canada)</option>
+                <option value="fr-FR">French (France)</option>
+                <option value="de-DE">German (Germany)</option>
+                <option value="el-GR">Greek (Greece)</option>
+                <option value="hi-IN">Hindi (India)</option>
+                <option value="it-IT">Italian (Italy)</option>
+                <option value="ja-JP">Japanese (Japan)</option>
+                <option value="ko-KR">Korean (Korea)</option>
+                <option value="pl-PL">Polish (Poland)</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="pt-PT">Portuguese (Portugal)</option>
+                <option value="ro-RO">Romanian (Romania)</option>
+                <option value="ru-RU">Russian (Russia)</option>
+                <option value="es-ES">Spanish (Spain)</option>
+                <option value="es-US">Spanish (United States)</option>
+                <option value="sv-SE">Swedish (Sweden)</option>
+                <option value="tr-TR">Turkish (Turkey)</option>
+                <option value="uk-UA">Ukrainian (Ukraine)</option>
+                <option value="vi-VN">Vietnamese (Vietnam)</option>
+                <!-- Preview Languages -->
+                <option value="af-ZA">Afrikaans (South Africa) (Preview)</option>
+                <option value="sq-AL">Albanian (Albania) (Preview)</option>
+                <option value="am-ET">Amharic (Ethiopia) (Preview)</option>
+                <option value="ar-DZ">Arabic (Algeria) (Preview)</option>
+                <option value="ar-BH">Arabic (Bahrain) (Preview)</option>
+                <option value="ar-EG">Arabic (Egypt) (Preview)</option>
+                <option value="ar-IL">Arabic (Israel) (Preview)</option>
+                <option value="ar-JO">Arabic (Jordan) (Preview)</option>
+                <option value="ar-KW">Arabic (Kuwait) (Preview)</option>
+                <option value="ar-LB">Arabic (Lebanon) (Preview)</option>
+                <option value="ar-MR">Arabic (Mauritania) (Preview)</option>
+                <option value="ar-MA">Arabic (Morocco) (Preview)</option>
+                <option value="ar-OM">Arabic (Oman) (Preview)</option>
+                <option value="ar-QA">Arabic (Qatar) (Preview)</option>
+                <option value="ar-SA">Arabic (Saudi Arabia) (Preview)</option>
+                <option value="ar-PS">Arabic (State of Palestine) (Preview)</option>
+                <option value="ar-SY">Arabic (Syria) (Preview)</option>
+                <option value="ar-TN">Arabic (Tunisia) (Preview)</option>
+                <option value="ar-AE">Arabic (United Arab Emirates) (Preview)</option>
+                <option value="my-MM">Burmese (Myanmar) (Preview)</option>
+                <option value="ar-IQ">Central Kurdish (Iraq) (Preview)</option>
+                <option value="yue-Hant-HK">Chinese, Cantonese (Traditional Hong Kong) (Preview)</option>
+                <option value="cmn-Hant-TW">Chinese, Mandarin (Traditional, Taiwan) (Preview)</option>
+                <option value="cs-CZ">Czech (Czech Republic) (Preview)</option>
+                <option value="en-PH">English (Philippines) (Preview)</option>
+                <option value="et-EE">Estonian (Estonia) (Preview)</option>
+                <option value="id-ID">Indonesian (Indonesia) (Preview)</option>
+                <option value="kn-IN">Kannada (India) (Preview)</option>
+                <option value="kk-KZ">Kazakh (Kazakhstan) (Preview)</option>
+                <option value="km-KH">Khmer (Cambodia) (Preview)</option>
+                <option value="ky-KG">Kyrgyz (Kyrgyzstan) (Preview)</option>
+                <option value="lo-LA">Lao (Laos) (Preview)</option>
+                <option value="lv-LV">Latvian (Latvia) (Preview)</option>
+                <option value="lt-LT">Lithuanian (Lithuania) (Preview)</option>
+                <option value="lb-LU">Luxembourgish (Luxembourg) (Preview)</option>
+                <option value="mk-MK">Macedonian (North Macedonia) (Preview)</option>
+                <option value="ms-MY">Malay (Malaysia) (Preview)</option>
+                <option value="ml-IN">Malayalam (India) (Preview)</option>
+                <option value="mt-MT">Maltese (Malta) (Preview)</option>
+                <option value="mi-NZ">Maori (New Zealand) (Preview)</option>
+                <option value="mr-IN">Marathi (India) (Preview)</option>
+                <option value="mn-MN">Mongolian (Mongolia) (Preview)</option>
+                <option value="ne-NP">Nepali (Nepal) (Preview)</option>
+                <option value="nso-ZA">Northern Sotho (South Africa) (Preview)</option>
+                <option value="no-NO">Norwegian (Norway) (Preview)</option>
+                <option value="or-IN">Oriya (India) (Preview)</option>
+                <option value="fa-IR">Persian (Iran) (Preview)</option>
+                <option value="pa-Guru-IN">Punjabi (Gurmukhi India) (Preview)</option>
+                <option value="sr-RS">Serbian (Serbia) (Preview)</option>
+                <option value="sk-SK">Slovak (Slovakia) (Preview)</option>
+                <option value="sl-SI">Slovenian (Slovenia) (Preview)</option>
+                <option value="es-MX">Spanish (Mexico) (Preview)</option>
+                <option value="sw-KE">Swahili (Kenya) (Preview)</option>
+                <option value="ta-IN">Tamil (India) (Preview)</option>
+                <option value="te-IN">Telugu (India) (Preview)</option>
+                <option value="th-TH">Thai (Thailand) (Preview)</option>
+                <option value="uz-UZ">Uzbek (Uzbekistan) (Preview)</option>
+                <option value="cy-GB">Welsh (United Kingdom) (Preview)</option>
+                <option value="wo-SN">Wolof (Senegal) (Preview)</option>
+                <option value="xh-ZA">Xhosa (South Africa) (Preview)</option>
+                <option value="yo-NG">Yoruba (Nigeria) (Preview)</option>
+                <option value="zu-ZA">Zulu (South Africa) (Preview)</option>
+            </select>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Language B</div>
+            <select id="languageB">
+                <!-- Generally Available (GA) Languages -->
+                <option value="ca-ES">Catalan (Spain)</option>
+                <option value="cmn-Hans-CN" selected>Chinese (Simplified, China)</option>
+                <option value="hr-HR">Croatian (Croatia)</option>
+                <option value="da-DK">Danish (Denmark)</option>
+                <option value="nl-NL">Dutch (Netherlands)</option>
+                <option value="en-AU">English (Australia)</option>
+                <option value="en-IN">English (India)</option>
+                <option value="en-GB">English (United Kingdom)</option>
+                <option value="en-US">English (United States)</option>
+                <option value="fi-FI">Finnish (Finland)</option>
+                <option value="fr-CA">French (Canada)</option>
+                <option value="fr-FR">French (France)</option>
+                <option value="de-DE">German (Germany)</option>
+                <option value="el-GR">Greek (Greece)</option>
+                <option value="hi-IN">Hindi (India)</option>
+                <option value="it-IT">Italian (Italy)</option>
+                <option value="ja-JP">Japanese (Japan)</option>
+                <option value="ko-KR">Korean (Korea)</option>
+                <option value="pl-PL">Polish (Poland)</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="pt-PT">Portuguese (Portugal)</option>
+                <option value="ro-RO">Romanian (Romania)</option>
+                <option value="ru-RU">Russian (Russia)</option>
+                <option value="es-ES">Spanish (Spain)</option>
+                <option value="es-US">Spanish (United States)</option>
+                <option value="sv-SE">Swedish (Sweden)</option>
+                <option value="tr-TR">Turkish (Turkey)</option>
+                <option value="uk-UA">Ukrainian (Ukraine)</option>
+                <option value="vi-VN">Vietnamese (Vietnam)</option>
+                <!-- Preview Languages -->
+                <option value="af-ZA">Afrikaans (South Africa) (Preview)</option>
+                <option value="sq-AL">Albanian (Albania) (Preview)</option>
+                <option value="am-ET">Amharic (Ethiopia) (Preview)</option>
+                <option value="ar-DZ">Arabic (Algeria) (Preview)</option>
+                <option value="ar-BH">Arabic (Bahrain) (Preview)</option>
+                <option value="ar-EG">Arabic (Egypt) (Preview)</option>
+                <option value="ar-IL">Arabic (Israel) (Preview)</option>
+                <option value="ar-JO">Arabic (Jordan) (Preview)</option>
+                <option value="ar-KW">Arabic (Kuwait) (Preview)</option>
+                <option value="ar-LB">Arabic (Lebanon) (Preview)</option>
+                <option value="ar-MR">Arabic (Mauritania) (Preview)</option>
+                <option value="ar-MA">Arabic (Morocco) (Preview)</option>
+                <option value="ar-OM">Arabic (Oman) (Preview)</option>
+                <option value="ar-QA">Arabic (Qatar) (Preview)</option>
+                <option value="ar-SA">Arabic (Saudi Arabia) (Preview)</option>
+                <option value="ar-PS">Arabic (State of Palestine) (Preview)</option>
+                <option value="ar-SY">Arabic (Syria) (Preview)</option>
+                <option value="ar-TN">Arabic (Tunisia) (Preview)</option>
+                <option value="ar-AE">Arabic (United Arab Emirates) (Preview)</option>
+                <option value="my-MM">Burmese (Myanmar) (Preview)</option>
+                <option value="ar-IQ">Central Kurdish (Iraq) (Preview)</option>
+                <option value="yue-Hant-HK">Chinese, Cantonese (Traditional Hong Kong) (Preview)</option>
+                <option value="cmn-Hant-TW">Chinese, Mandarin (Traditional, Taiwan) (Preview)</option>
+                <option value="cs-CZ">Czech (Czech Republic) (Preview)</option>
+                <option value="en-PH">English (Philippines) (Preview)</option>
+                <option value="et-EE">Estonian (Estonia) (Preview)</option>
+                <option value="id-ID">Indonesian (Indonesia) (Preview)</option>
+                <option value="kn-IN">Kannada (India) (Preview)</option>
+                <option value="kk-KZ">Kazakh (Kazakhstan) (Preview)</option>
+                <option value="km-KH">Khmer (Cambodia) (Preview)</option>
+                <option value="ky-KG">Kyrgyz (Kyrgyzstan) (Preview)</option>
+                <option value="lo-LA">Lao (Laos) (Preview)</option>
+                <option value="lv-LV">Latvian (Latvia) (Preview)</option>
+                <option value="lt-LT">Lithuanian (Lithuania) (Preview)</option>
+                <option value="lb-LU">Luxembourgish (Luxembourg) (Preview)</option>
+                <option value="mk-MK">Macedonian (North Macedonia) (Preview)</option>
+                <option value="ms-MY">Malay (Malaysia) (Preview)</option>
+                <option value="ml-IN">Malayalam (India) (Preview)</option>
+                <option value="mt-MT">Maltese (Malta) (Preview)</option>
+                <option value="mi-NZ">Maori (New Zealand) (Preview)</option>
+                <option value="mr-IN">Marathi (India) (Preview)</option>
+                <option value="mn-MN">Mongolian (Mongolia) (Preview)</option>
+                <option value="ne-NP">Nepali (Nepal) (Preview)</option>
+                <option value="nso-ZA">Northern Sotho (South Africa) (Preview)</option>
+                <option value="no-NO">Norwegian (Norway) (Preview)</option>
+                <option value="or-IN">Oriya (India) (Preview)</option>
+                <option value="fa-IR">Persian (Iran) (Preview)</option>
+                <option value="pa-Guru-IN">Punjabi (Gurmukhi India) (Preview)</option>
+                <option value="sr-RS">Serbian (Serbia) (Preview)</option>
+                <option value="sk-SK">Slovak (Slovakia) (Preview)</option>
+                <option value="sl-SI">Slovenian (Slovenia) (Preview)</option>
+                <option value="es-MX">Spanish (Mexico) (Preview)</option>
+                <option value="sw-KE">Swahili (Kenya) (Preview)</option>
+                <option value="ta-IN">Tamil (India) (Preview)</option>
+                <option value="te-IN">Telugu (India) (Preview)</option>
+                <option value="th-TH">Thai (Thailand) (Preview)</option>
+                <option value="uz-UZ">Uzbek (Uzbekistan) (Preview)</option>
+                <option value="cy-GB">Welsh (United Kingdom) (Preview)</option>
+                <option value="wo-SN">Wolof (Senegal) (Preview)</option>
+                <option value="xh-ZA">Xhosa (South Africa) (Preview)</option>
+                <option value="yo-NG">Yoruba (Nigeria) (Preview)</option>
+                <option value="zu-ZA">Zulu (South Africa) (Preview)</option>
+            </select>
+        </div>
+
+        <div>
+            <button id="applyLangBtn" class="nav-btn">Apply Languages</button>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Playback Mode</div>
+            <select id="playbackMode">
+                <option value="streaming">Streaming</option>
+                <option value="turn_complete" selected>On Turn Complete</option>
+            </select>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Autoplay</div>
+            <button id="navAutoplayBtn" class="nav-btn">Autoplay: ON</button>
+        </div>
+
+        <div>
+            <div class="nav-section-label">Current Mode</div>
+            <span class="status-pill" id="modeStatus">turn_complete</span>
+        </div>
+    </nav>
 
     <script>
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const navAutoplayBtn = document.getElementById('navAutoplayBtn');
+        const playbackModeSelect = document.getElementById('playbackMode');
+        const modeStatus = document.getElementById('modeStatus');
+        const applyLangBtn = document.getElementById('applyLangBtn');
+        const languageASelect = document.getElementById('languageA');
+        const languageBSelect = document.getElementById('languageB');
         const chatContainer = document.getElementById('chat-container');
-        const autoplayBtn = document.getElementById('autoplayBtn');
+        const wsStatusEl = document.getElementById('wsStatus');
+        const wsStatusText = document.getElementById('wsStatusText');
+        const liveApiStatusEl = document.getElementById('liveApiStatus');
+        const liveApiStatusText = document.getElementById('liveApiStatusText');
 
         let socket;
         let audioContext;
@@ -140,17 +463,39 @@
         let recordedChunks = [];
         let userMessageDiv;
         let botMessageDiv;
-        let audioQueue = [];
+
+        // ---------- Playback state ----------
+        // Playback modes:
+        //   'streaming'      : play each audio blob as soon as it arrives.
+        //   'turn_complete'  : buffer all audio chunks for the current turn and
+        //                      play them as one consolidated clip when the
+        //                      backend signals turn_complete.
+        let playbackMode = 'turn_complete';
+        let audioQueue = [];          // queued audio object URLs ready for playback
+        let pendingTurnChunks = [];   // raw PCM ArrayBuffers buffered for current turn
+        // Tracks in-flight arrayBuffer() promises so that turn_complete waits
+        // for all blobs to be decoded before flushing (fixes race condition).
+        let pendingBlobPromises = [];
         let isPlaying = false;
         let autoplayEnabled = true;
-        let audioPlayer = new Audio();
+        const audioPlayer = new Audio();
 
-        autoplayBtn.addEventListener('click', () => {
+        // ---------- Sidebar handlers ----------
+        navAutoplayBtn.addEventListener('click', () => {
             autoplayEnabled = !autoplayEnabled;
-            autoplayBtn.textContent = `Autoplay: ${autoplayEnabled ? 'ON' : 'OFF'}`;
-            if (autoplayEnabled) {
-                // Clear the audio queue to prevent playing backlogged audio
+            navAutoplayBtn.textContent = `Autoplay: ${autoplayEnabled ? 'ON' : 'OFF'}`;
+            if (!autoplayEnabled) {
                 audioQueue = [];
+                pendingTurnChunks = [];
+            }
+        });
+
+        playbackModeSelect.addEventListener('change', () => {
+            playbackMode = playbackModeSelect.value;
+            modeStatus.textContent = playbackMode;
+            // When switching to streaming mid-turn, flush buffered chunks immediately.
+            if (playbackMode === 'streaming' && pendingTurnChunks.length > 0) {
+                flushPendingTurn();
             }
         });
 
@@ -160,21 +505,39 @@
         });
 
         function playNextInQueue() {
-            if (audioQueue.length > 0 && !isPlaying && autoplayEnabled) {
-                isPlaying = true;
-                const audioURL = audioQueue.shift();
-                audioPlayer.src = audioURL;
-                const playPromise = audioPlayer.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.error("Audio playback failed, requeueing:", error);
-                        isPlaying = false;
-                        audioQueue.unshift(audioURL);
-                    });
-                }
-            }
+            if (audioQueue.length === 0 || isPlaying || !autoplayEnabled) return;
+            isPlaying = true;
+            const audioURL = audioQueue.shift();
+            audioPlayer.src = audioURL;
+            audioPlayer.play().catch(err => {
+                console.error('Audio playback failed, requeueing:', err);
+                isPlaying = false;
+                audioQueue.unshift(audioURL);
+            });
         }
 
+        function enqueueWavFromPcm(pcmBuffer) {
+            const blob = pcmToWav(pcmBuffer, 24000, 1);
+            audioQueue.push(URL.createObjectURL(blob));
+            playNextInQueue();
+        }
+
+        function flushPendingTurn() {
+            if (pendingTurnChunks.length === 0) return;
+            const totalLength = pendingTurnChunks.reduce(
+                (acc, chunk) => acc + chunk.byteLength, 0,
+            );
+            const combined = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of pendingTurnChunks) {
+                combined.set(new Uint8Array(chunk), offset);
+                offset += chunk.byteLength;
+            }
+            pendingTurnChunks = [];
+            enqueueWavFromPcm(combined.buffer);
+        }
+
+        // ---------- PCM -> WAV helper ----------
         function writeString(view, offset, string) {
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
@@ -187,78 +550,27 @@
             const pcmLength = pcmData.byteLength;
             const totalLength = pcmLength + 44;
 
-            // RIFF chunk descriptor
             writeString(view, 0, 'RIFF');
             view.setUint32(4, totalLength - 8, true);
             writeString(view, 8, 'WAVE');
-
-            // "fmt " sub-chunk
             writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); // Sub-chunk size (16 for PCM)
-            view.setUint16(20, 1, true); // Audio format (1 for PCM)
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
             view.setUint16(22, numChannels, true);
             view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * numChannels * 2, true); // Byte rate
-            view.setUint16(32, numChannels * 2, true); // Block align
-            view.setUint16(34, 16, true); // Bits per sample
-
-            // "data" sub-chunk
+            view.setUint32(28, sampleRate * numChannels * 2, true);
+            view.setUint16(32, numChannels * 2, true);
+            view.setUint16(34, 16, true);
             writeString(view, 36, 'data');
             view.setUint32(40, pcmLength, true);
 
             const wavBytes = new Uint8Array(totalLength);
             wavBytes.set(new Uint8Array(header), 0);
             wavBytes.set(new Uint8Array(pcmData), 44);
-
             return new Blob([wavBytes], { type: 'audio/wav' });
         }
 
-        const connectWebSocket = () => {
-            socket = new WebSocket('ws://localhost:8000/ws');
-
-            socket.onopen = () => {
-                console.log('WebSocket connection established');
-            };
-
-            socket.onmessage = (event) => {
-                if (event.data instanceof Blob) {
-                    event.data.arrayBuffer().then(buffer => {
-                        const blob = pcmToWav(buffer, 24000, 1);
-                        const audioURL = URL.createObjectURL(blob);
-                        audioQueue.push(audioURL);
-                        playNextInQueue();
-                    });
-                } else {
-                    const data = JSON.parse(event.data);
-                    if (data.input_transcription) {
-                        if (!userMessageDiv || botMessageDiv) {
-                            userMessageDiv = createMessageDiv('user-message');
-                            botMessageDiv = null;
-                        }
-                        const textNode = userMessageDiv.querySelector('.message-text');
-                        textNode.innerHTML += data.input_transcription;
-                    }
-                    if (data.output_transcription) {
-                        if (!botMessageDiv || userMessageDiv) {
-                            botMessageDiv = createMessageDiv('bot-message');
-                            userMessageDiv = null;
-                        }
-                        const textNode = botMessageDiv.querySelector('.message-text');
-                        textNode.innerHTML += data.output_transcription;
-                    }
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }
-            };
-
-            socket.onclose = () => {
-                console.log('WebSocket connection closed');
-            };
-
-            socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
-        };
-
+        // ---------- Chat helpers ----------
         const createMessageDiv = (className) => {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', className);
@@ -268,23 +580,133 @@
             chatContainer.appendChild(messageDiv);
             return messageDiv;
         };
-        
+
+        // ---------- WebSocket status helper ----------
+        const setWsStatus = (state, label) => {
+            if (!wsStatusEl) return;
+            wsStatusEl.classList.remove('connected', 'disconnected', 'connecting');
+            wsStatusEl.classList.add(state);
+            if (wsStatusText) wsStatusText.textContent = label;
+        };
+
+        const setLiveApiStatus = (state, label) => {
+            if (!liveApiStatusEl) return;
+            liveApiStatusEl.classList.remove('connected', 'disconnected', 'connecting');
+            liveApiStatusEl.classList.add(state);
+            if (liveApiStatusText) liveApiStatusText.textContent = label;
+        };
+
+        const liveApiLabelFor = (state) => {
+            switch (state) {
+                case 'connected':    return 'Connected';
+                case 'connecting':   return 'Connecting…';
+                case 'error':        return 'Error';
+                case 'disconnected':
+                default:             return 'Disconnected';
+            }
+        };
+
+        // ---------- WebSocket ----------
+        let wsReconnectTimer = null;
+        const connectWebSocket = () => {
+            setWsStatus('connecting', 'Connecting…');
+            socket = new WebSocket('ws://localhost:8000/ws');
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+                setWsStatus('connected', 'Connected');
+            };
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                setWsStatus('disconnected', 'Disconnected');
+                // Without a WebSocket we can't know the Live API state either.
+                setLiveApiStatus('disconnected', 'Unknown');
+                // Attempt to auto-reconnect after a short delay.
+                if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+                wsReconnectTimer = setTimeout(() => {
+                    wsReconnectTimer = null;
+                    connectWebSocket();
+                }, 2000);
+            };
+            socket.onerror = (err) => {
+                console.error('WebSocket error:', err);
+                setWsStatus('disconnected', 'Error');
+            };
+
+            socket.onmessage = (event) => {
+                if (event.data instanceof Blob) {
+                    // Track this promise so turn_complete can wait for all
+                    // in-flight arrayBuffer() resolutions before flushing.
+                    // This prevents the race where turn_complete JSON arrives
+                    // before the last blob's .then() has resolved.
+                    const p = event.data.arrayBuffer().then(buffer => {
+                        // Remove this promise from the pending list.
+                        pendingBlobPromises = pendingBlobPromises.filter(x => x !== p);
+                        if (playbackMode === 'turn_complete') {
+                            pendingTurnChunks.push(buffer);
+                        } else {
+                            enqueueWavFromPcm(buffer);
+                        }
+                    });
+                    pendingBlobPromises.push(p);
+                    return;
+                }
+
+                const data = JSON.parse(event.data);
+
+                if (data.live_api_status) {
+                    const state = data.live_api_status.state || 'disconnected';
+                    setLiveApiStatus(state, liveApiLabelFor(state));
+                }
+
+                if (data.input_transcription) {
+                    if (!userMessageDiv || botMessageDiv) {
+                        userMessageDiv = createMessageDiv('user-message');
+                        botMessageDiv = null;
+                    }
+                    userMessageDiv.querySelector('.message-text').innerHTML += data.input_transcription;
+                }
+
+                if (data.output_transcription) {
+                    if (!botMessageDiv || userMessageDiv) {
+                        botMessageDiv = createMessageDiv('bot-message');
+                        userMessageDiv = null;
+                    }
+                    botMessageDiv.querySelector('.message-text').innerHTML += data.output_transcription;
+                }
+
+                if (data.turn_complete) {
+                    if (playbackMode === 'turn_complete') {
+                        // Wait for all in-flight blob→ArrayBuffer conversions to
+                        // complete before flushing so no chunks are missed.
+                        const snapshotPromises = pendingBlobPromises.slice();
+                        Promise.all(snapshotPromises).then(() => {
+                            flushPendingTurn();
+                        });
+                    }
+                    userMessageDiv = null;
+                    botMessageDiv = null;
+                }
+
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
+        };
+
+        // ---------- Recording ----------
         const startRecording = async () => {
             recordedChunks = [];
             userMessageDiv = null;
             botMessageDiv = null;
+            // Clear any leftover buffered state from a previous turn.
+            pendingTurnChunks = [];
+            pendingBlobPromises = [];
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                globalStream = stream;
+                globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                    sampleRate: 16000
-                });
-                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 await audioContext.audioWorklet.addModule('/static/audio-processor.js');
-
                 audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor');
-                
+
                 audioWorkletNode.port.onmessage = (event) => {
                     if (socket && socket.readyState === WebSocket.OPEN) {
                         socket.send(event.data);
@@ -292,9 +714,15 @@
                     }
                 };
 
-                input = audioContext.createMediaStreamSource(stream);
+                input = audioContext.createMediaStreamSource(globalStream);
                 input.connect(audioWorkletNode);
                 audioWorkletNode.connect(audioContext.destination);
+
+                // Signal the server to open a new Live API session now.
+                // The WebSocket connection itself remains persistent between recordings.
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ action: 'start_session' }));
+                }
 
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
@@ -304,17 +732,15 @@
         };
 
         const stopRecording = () => {
-            if (globalStream) {
-                globalStream.getTracks().forEach(track => track.stop());
-            }
-            if (audioWorkletNode) {
-                audioWorkletNode.disconnect();
-            }
-            if (audioContext) {
-                audioContext.close();
-            }
-            if (input) {
-                input.disconnect();
+            if (globalStream) globalStream.getTracks().forEach(track => track.stop());
+            if (audioWorkletNode) audioWorkletNode.disconnect();
+            if (input) input.disconnect();
+            if (audioContext) audioContext.close();
+
+            // Signal the server to close the current Live API session so a
+            // fresh one is ready for the next Start Recording press.
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: 'stop_session' }));
             }
 
             if (userMessageDiv && recordedChunks.length > 0) {
@@ -325,30 +751,43 @@
                     combined.set(new Uint8Array(chunk), offset);
                     offset += chunk.byteLength;
                 }
-
                 const blob = pcmToWav(combined.buffer, 16000, 1);
-                const audioURL = URL.createObjectURL(blob);
-                const audioPlayer = document.createElement('audio');
-                audioPlayer.controls = true;
-                audioPlayer.src = audioURL;
-                userMessageDiv.appendChild(audioPlayer);
+                const player = document.createElement('audio');
+                player.controls = true;
+                player.src = URL.createObjectURL(blob);
+                userMessageDiv.appendChild(player);
             }
 
             startBtn.disabled = false;
             stopBtn.disabled = true;
         };
 
+        // ---------- Language selection ----------
+        const updateLanguages = () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+            const sourceCode = languageASelect.value;
+            const targetCode = languageBSelect.value;
+            const sourceName = languageASelect.options[languageASelect.selectedIndex].text;
+            const targetName = languageBSelect.options[languageBSelect.selectedIndex].text;
+            socket.send(JSON.stringify({
+                source_language: sourceName,
+                source_language_code: sourceCode,
+                target_language: targetName,
+                target_language_code: targetCode,
+            }));
+            const infoDiv = createMessageDiv('bot-message');
+            infoDiv.style.backgroundColor = '#e3f2fd';
+            infoDiv.querySelector('.message-text').innerHTML =
+                `<strong>[Languages updated]</strong><br>A: ${sourceName} [${sourceCode}]<br>B: ${targetName} [${targetCode}]`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        };
+
+        // ---------- Wire up events ----------
         startBtn.addEventListener('click', startRecording);
         stopBtn.addEventListener('click', stopRecording);
+        applyLangBtn.addEventListener('click', updateLanguages);
 
         connectWebSocket();
-
-        const updateLanguage = () => {
-            const language = document.getElementById('language').value;
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ target_language: language }));
-            }
-        };
     </script>
 </body>
 </html>

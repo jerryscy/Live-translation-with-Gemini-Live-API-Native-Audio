@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-numpy==2.2.4
+numpy
 torch
 torchaudio
 onnxruntime
@@ -8,3 +8,4 @@ silero-vad
 google-cloud-aiplatform
 python-dotenv
 google-genai
+gemini-live-telemetry
