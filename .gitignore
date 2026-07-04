@@ -8,12 +8,25 @@ myenv/
 venv/
 env/
 .venv/
+.venv-app/
 
 # Python bytecode / cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Logs & scratch
+*.log
+diagnose_*.log
+
+# Audio scratch files
+*.wav
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
 
 # macOS
 .DS_Store

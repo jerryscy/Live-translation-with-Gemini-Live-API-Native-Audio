@@ -1,793 +1,363 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Demo</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: row;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f4;
-            overflow: hidden;
-        }
-        /* ---------- Main content column ---------- */
-        #main-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-            height: 100vh;
-            overflow: hidden;
-        }
-        /* ---------- Right-side Navigation Sidebar ---------- */
-        #nav-bar {
-            width: 220px;
-            min-width: 220px;
-            background-color: #2c3e50;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            padding: 20px 16px;
-            box-sizing: border-box;
-            box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-            gap: 16px;
-            overflow-y: auto;
-        }
-        #nav-bar .nav-title {
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #34495e;
-        }
-        #nav-bar .nav-section-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #95a5a6;
-            margin-bottom: 4px;
-        }
-        #nav-bar select,
-        #nav-bar button.nav-btn {
-            width: 100%;
-            padding: 8px 10px;
-            font-size: 13px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            box-sizing: border-box;
-        }
-        #nav-bar select {
-            background-color: #fff;
-            color: #2c3e50;
-        }
-        #nav-bar button.nav-btn {
-            background-color: #5bc0de;
-            color: #fff;
-        }
-        #nav-bar .status-pill {
-            background-color: #34495e;
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            text-align: center;
-        }
-        #nav-bar .ws-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: #34495e;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-        #nav-bar .ws-status .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: #95a5a6;
-            box-shadow: 0 0 4px rgba(0,0,0,0.4);
-            flex-shrink: 0;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        #nav-bar .ws-status.connected .status-dot {
-            background-color: #2ecc71;
-            box-shadow: 0 0 6px #2ecc71;
-        }
-        #nav-bar .ws-status.disconnected .status-dot {
-            background-color: #e74c3c;
-            box-shadow: 0 0 6px #e74c3c;
-        }
-        #nav-bar .ws-status.connecting .status-dot {
-            background-color: #f1c40f;
-            box-shadow: 0 0 6px #f1c40f;
-            animation: pulse 1.2s infinite ease-in-out;
-        }
-        @keyframes pulse {
-            0%   { opacity: 1; }
-            50%  { opacity: 0.4; }
-            100% { opacity: 1; }
-        }
-        /* ---------- Chat ---------- */
-        #chat-container {
-            flex-grow: 1;
-            width: 90%;
-            max-width: 800px;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-self: center;
-        }
-        .message {
-            display: flex;
-            flex-direction: column;
-            max-width: 70%;
-            padding: 10px 15px;
-            border-radius: 15px;
-        }
-        .user-message {
-            background-color: #dcf8c6;
-            align-self: flex-start;
-            border-bottom-left-radius: 0;
-        }
-        .bot-message {
-            background-color: #fff;
-            align-self: flex-end;
-            border-bottom-right-radius: 0;
-        }
-        .message-text {
-            margin-bottom: 10px;
-        }
-        audio {
-            width: 100%;
-            outline: none;
-        }
-        /* ---------- Language & recording controls ---------- */
-        #language-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            background-color: #fff;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #controls {
-            padding: 16px 20px;
-            background-color: #fff;
-            width: 100%;
-            box-sizing: border-box;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #4CAF50;
-            color: white;
-        }
-        button:disabled {
-            background-color: #ccc;
-        }
-        select {
-            padding: 8px;
-            font-size: 15px;
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Translation · Gemini Live API</title>
+<style>
+  :root {
+    --bg: #0f1221;
+    --panel: #171a2e;
+    --panel-2: #1e2340;
+    --line: #2b3157;
+    --text: #e7e9f5;
+    --muted: #9aa0c7;
+    --in: #2563eb;
+    --out: #16a34a;
+    --accent: #7c3aed;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    padding: 12px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .spacer { flex: 1; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+  .dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  .dot.connecting { background: #eab308; }
+  .dot.error { background: var(--danger); }
+
+  .controls {
+    padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; min-width: 190px;
+  }
+  button {
+    border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; color: #fff; background: var(--accent);
+  }
+  button.rec { background: var(--in); }
+  button.rec.recording { background: var(--danger); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+  .switch { position: relative; width: 42px; height: 24px; }
+  .switch input { display: none; }
+  .slider {
+    position: absolute; inset: 0; background: #3a3f66; border-radius: 999px; transition: .2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: .2s;
+  }
+  .switch input:checked + .slider { background: var(--out); }
+  .switch input:checked + .slider::before { transform: translateX(18px); }
+  .switch input:disabled + .slider { opacity: .4; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  .chat-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .columns { flex: 1; display: flex; min-height: 0; }
+  .col { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); }
+  .col:last-child { border-right: none; }
+  .col-head {
+    padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--muted);
+    border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .col-head .badge { width: 8px; height: 8px; border-radius: 50%; }
+  .col.input .badge { background: var(--in); }
+  .col.output .badge { background: var(--out); }
+  .msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble {
+    max-width: 92%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4;
+    background: var(--panel-2); border: 1px solid var(--line); white-space: pre-wrap; word-break: break-word;
+  }
+  .col.input .bubble { align-self: flex-start; border-left: 3px solid var(--in); }
+  .col.output .bubble { align-self: flex-end; border-right: 3px solid var(--out); }
+  .bubble .meta { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+  .bubble.pending { opacity: .8; }
+
+  .raw {
+    height: 200px; border-top: 1px solid var(--line); background: #0b0d18; display: flex; flex-direction: column;
+  }
+  .raw-head {
+    padding: 6px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .raw-head button { padding: 4px 10px; font-size: 11px; background: #2b3157; }
+  #rawLog {
+    flex: 1; overflow-y: auto; margin: 0; padding: 10px 14px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; color: #a9e3c0; white-space: pre-wrap; word-break: break-all;
+  }
+</style>
 </head>
 <body>
-    <!-- ---------- Main content ---------- -->
-    <div id="main-content">
-        <h1>Demo</h1>
-        <div id="chat-container"></div>
-        <div id="controls">
-            <button id="startBtn">Start Recording</button>
-            <button id="stopBtn" disabled>Stop Recording</button>
-        </div>
+  <header>
+    <h1>🎙️ Live Translation · Gemini Live API</h1>
+    <span id="modelName" class="status"></span>
+    <div class="spacer"></div>
+    <div class="status"><span id="wsDot" class="dot"></span> Server</div>
+    <div class="status"><span id="apiDot" class="dot"></span> Live API</div>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label>Input language</label>
+      <select id="sourceLang"></select>
+    </div>
+    <div class="field">
+      <label>Output language</label>
+      <select id="targetLang"></select>
     </div>
 
-    <!-- ---------- Right-side Navigation Sidebar ---------- -->
-    <nav id="nav-bar">
-        <div class="nav-title">⚙ Settings</div>
+    <button id="recBtn" class="rec">▶ Start</button>
 
-        <div>
-            <div class="nav-section-label">Connection - WebSocket</div>
-            <div class="ws-status disconnected" id="wsStatus" title="Browser ↔ server WebSocket connection status">
-                <span class="status-dot"></span>
-                <span id="wsStatusText">Disconnected</span>
-            </div>
+    <label class="toggle">
+      <span class="switch"><input type="checkbox" id="playToggle" checked><span class="slider"></span></span>
+      Play audio
+    </label>
+
+    <label class="toggle" title="Toggle DeepFilterNet2 denoising in real time for A/B comparison">
+      <span class="switch"><input type="checkbox" id="denoiseToggle"><span class="slider"></span></span>
+      DeepFilterNet2 <span id="denoiseState" style="color:var(--muted);font-size:11px;"></span>
+    </label>
+  </div>
+
+  <main>
+    <div class="chat-wrap">
+      <div class="columns">
+        <section class="col input">
+          <div class="col-head"><span class="badge"></span> Input (transcription)</div>
+          <div id="inputMsgs" class="msgs"></div>
+        </section>
+        <section class="col output">
+          <div class="col-head"><span class="badge"></span> Output (translation)</div>
+          <div id="outputMsgs" class="msgs"></div>
+        </section>
+      </div>
+
+      <div class="raw">
+        <div class="raw-head">
+          Raw messages (data return format)
+          <div class="spacer" style="flex:1"></div>
+          <button id="clearRaw">Clear</button>
         </div>
+        <pre id="rawLog"></pre>
+      </div>
+    </div>
+  </main>
 
-        <div>
-            <div class="nav-section-label">Connection - Live API</div>
-            <div class="ws-status disconnected" id="liveApiStatus" title="Server ↔ Gemini Live API connection status">
-                <span class="status-dot"></span>
-                <span id="liveApiStatusText">Disconnected</span>
-            </div>
-        </div>
+<script>
+const INPUT_SAMPLE_RATE = 16000;   // sent to Live API
+const OUTPUT_SAMPLE_RATE = 24000;  // received translated audio
 
-        <div>
-            <div class="nav-section-label">Language A</div>
-            <select id="languageA">
-                <!-- Generally Available (GA) Languages -->
-                <option value="ca-ES">Catalan (Spain)</option>
-                <option value="cmn-Hans-CN">Chinese (Simplified, China)</option>
-                <option value="hr-HR">Croatian (Croatia)</option>
-                <option value="da-DK">Danish (Denmark)</option>
-                <option value="nl-NL">Dutch (Netherlands)</option>
-                <option value="en-AU">English (Australia)</option>
-                <option value="en-IN">English (India)</option>
-                <option value="en-GB">English (United Kingdom)</option>
-                <option value="en-US" selected>English (United States)</option>
-                <option value="fi-FI">Finnish (Finland)</option>
-                <option value="fr-CA">French (Canada)</option>
-                <option value="fr-FR">French (France)</option>
-                <option value="de-DE">German (Germany)</option>
-                <option value="el-GR">Greek (Greece)</option>
-                <option value="hi-IN">Hindi (India)</option>
-                <option value="it-IT">Italian (Italy)</option>
-                <option value="ja-JP">Japanese (Japan)</option>
-                <option value="ko-KR">Korean (Korea)</option>
-                <option value="pl-PL">Polish (Poland)</option>
-                <option value="pt-BR">Portuguese (Brazil)</option>
-                <option value="pt-PT">Portuguese (Portugal)</option>
-                <option value="ro-RO">Romanian (Romania)</option>
-                <option value="ru-RU">Russian (Russia)</option>
-                <option value="es-ES">Spanish (Spain)</option>
-                <option value="es-US">Spanish (United States)</option>
-                <option value="sv-SE">Swedish (Sweden)</option>
-                <option value="tr-TR">Turkish (Turkey)</option>
-                <option value="uk-UA">Ukrainian (Ukraine)</option>
-                <option value="vi-VN">Vietnamese (Vietnam)</option>
-                <!-- Preview Languages -->
-                <option value="af-ZA">Afrikaans (South Africa) (Preview)</option>
-                <option value="sq-AL">Albanian (Albania) (Preview)</option>
-                <option value="am-ET">Amharic (Ethiopia) (Preview)</option>
-                <option value="ar-DZ">Arabic (Algeria) (Preview)</option>
-                <option value="ar-BH">Arabic (Bahrain) (Preview)</option>
-                <option value="ar-EG">Arabic (Egypt) (Preview)</option>
-                <option value="ar-IL">Arabic (Israel) (Preview)</option>
-                <option value="ar-JO">Arabic (Jordan) (Preview)</option>
-                <option value="ar-KW">Arabic (Kuwait) (Preview)</option>
-                <option value="ar-LB">Arabic (Lebanon) (Preview)</option>
-                <option value="ar-MR">Arabic (Mauritania) (Preview)</option>
-                <option value="ar-MA">Arabic (Morocco) (Preview)</option>
-                <option value="ar-OM">Arabic (Oman) (Preview)</option>
-                <option value="ar-QA">Arabic (Qatar) (Preview)</option>
-                <option value="ar-SA">Arabic (Saudi Arabia) (Preview)</option>
-                <option value="ar-PS">Arabic (State of Palestine) (Preview)</option>
-                <option value="ar-SY">Arabic (Syria) (Preview)</option>
-                <option value="ar-TN">Arabic (Tunisia) (Preview)</option>
-                <option value="ar-AE">Arabic (United Arab Emirates) (Preview)</option>
-                <option value="my-MM">Burmese (Myanmar) (Preview)</option>
-                <option value="ar-IQ">Central Kurdish (Iraq) (Preview)</option>
-                <option value="yue-Hant-HK">Chinese, Cantonese (Traditional Hong Kong) (Preview)</option>
-                <option value="cmn-Hant-TW">Chinese, Mandarin (Traditional, Taiwan) (Preview)</option>
-                <option value="cs-CZ">Czech (Czech Republic) (Preview)</option>
-                <option value="en-PH">English (Philippines) (Preview)</option>
-                <option value="et-EE">Estonian (Estonia) (Preview)</option>
-                <option value="id-ID">Indonesian (Indonesia) (Preview)</option>
-                <option value="kn-IN">Kannada (India) (Preview)</option>
-                <option value="kk-KZ">Kazakh (Kazakhstan) (Preview)</option>
-                <option value="km-KH">Khmer (Cambodia) (Preview)</option>
-                <option value="ky-KG">Kyrgyz (Kyrgyzstan) (Preview)</option>
-                <option value="lo-LA">Lao (Laos) (Preview)</option>
-                <option value="lv-LV">Latvian (Latvia) (Preview)</option>
-                <option value="lt-LT">Lithuanian (Lithuania) (Preview)</option>
-                <option value="lb-LU">Luxembourgish (Luxembourg) (Preview)</option>
-                <option value="mk-MK">Macedonian (North Macedonia) (Preview)</option>
-                <option value="ms-MY">Malay (Malaysia) (Preview)</option>
-                <option value="ml-IN">Malayalam (India) (Preview)</option>
-                <option value="mt-MT">Maltese (Malta) (Preview)</option>
-                <option value="mi-NZ">Maori (New Zealand) (Preview)</option>
-                <option value="mr-IN">Marathi (India) (Preview)</option>
-                <option value="mn-MN">Mongolian (Mongolia) (Preview)</option>
-                <option value="ne-NP">Nepali (Nepal) (Preview)</option>
-                <option value="nso-ZA">Northern Sotho (South Africa) (Preview)</option>
-                <option value="no-NO">Norwegian (Norway) (Preview)</option>
-                <option value="or-IN">Oriya (India) (Preview)</option>
-                <option value="fa-IR">Persian (Iran) (Preview)</option>
-                <option value="pa-Guru-IN">Punjabi (Gurmukhi India) (Preview)</option>
-                <option value="sr-RS">Serbian (Serbia) (Preview)</option>
-                <option value="sk-SK">Slovak (Slovakia) (Preview)</option>
-                <option value="sl-SI">Slovenian (Slovenia) (Preview)</option>
-                <option value="es-MX">Spanish (Mexico) (Preview)</option>
-                <option value="sw-KE">Swahili (Kenya) (Preview)</option>
-                <option value="ta-IN">Tamil (India) (Preview)</option>
-                <option value="te-IN">Telugu (India) (Preview)</option>
-                <option value="th-TH">Thai (Thailand) (Preview)</option>
-                <option value="uz-UZ">Uzbek (Uzbekistan) (Preview)</option>
-                <option value="cy-GB">Welsh (United Kingdom) (Preview)</option>
-                <option value="wo-SN">Wolof (Senegal) (Preview)</option>
-                <option value="xh-ZA">Xhosa (South Africa) (Preview)</option>
-                <option value="yo-NG">Yoruba (Nigeria) (Preview)</option>
-                <option value="zu-ZA">Zulu (South Africa) (Preview)</option>
-            </select>
-        </div>
+let ws = null;
+let audioCtx = null;         // capture context (16 kHz)
+let workletNode = null;
+let micStream = null;
+let recording = false;
 
-        <div>
-            <div class="nav-section-label">Language B</div>
-            <select id="languageB">
-                <!-- Generally Available (GA) Languages -->
-                <option value="ca-ES">Catalan (Spain)</option>
-                <option value="cmn-Hans-CN" selected>Chinese (Simplified, China)</option>
-                <option value="hr-HR">Croatian (Croatia)</option>
-                <option value="da-DK">Danish (Denmark)</option>
-                <option value="nl-NL">Dutch (Netherlands)</option>
-                <option value="en-AU">English (Australia)</option>
-                <option value="en-IN">English (India)</option>
-                <option value="en-GB">English (United Kingdom)</option>
-                <option value="en-US">English (United States)</option>
-                <option value="fi-FI">Finnish (Finland)</option>
-                <option value="fr-CA">French (Canada)</option>
-                <option value="fr-FR">French (France)</option>
-                <option value="de-DE">German (Germany)</option>
-                <option value="el-GR">Greek (Greece)</option>
-                <option value="hi-IN">Hindi (India)</option>
-                <option value="it-IT">Italian (Italy)</option>
-                <option value="ja-JP">Japanese (Japan)</option>
-                <option value="ko-KR">Korean (Korea)</option>
-                <option value="pl-PL">Polish (Poland)</option>
-                <option value="pt-BR">Portuguese (Brazil)</option>
-                <option value="pt-PT">Portuguese (Portugal)</option>
-                <option value="ro-RO">Romanian (Romania)</option>
-                <option value="ru-RU">Russian (Russia)</option>
-                <option value="es-ES">Spanish (Spain)</option>
-                <option value="es-US">Spanish (United States)</option>
-                <option value="sv-SE">Swedish (Sweden)</option>
-                <option value="tr-TR">Turkish (Turkey)</option>
-                <option value="uk-UA">Ukrainian (Ukraine)</option>
-                <option value="vi-VN">Vietnamese (Vietnam)</option>
-                <!-- Preview Languages -->
-                <option value="af-ZA">Afrikaans (South Africa) (Preview)</option>
-                <option value="sq-AL">Albanian (Albania) (Preview)</option>
-                <option value="am-ET">Amharic (Ethiopia) (Preview)</option>
-                <option value="ar-DZ">Arabic (Algeria) (Preview)</option>
-                <option value="ar-BH">Arabic (Bahrain) (Preview)</option>
-                <option value="ar-EG">Arabic (Egypt) (Preview)</option>
-                <option value="ar-IL">Arabic (Israel) (Preview)</option>
-                <option value="ar-JO">Arabic (Jordan) (Preview)</option>
-                <option value="ar-KW">Arabic (Kuwait) (Preview)</option>
-                <option value="ar-LB">Arabic (Lebanon) (Preview)</option>
-                <option value="ar-MR">Arabic (Mauritania) (Preview)</option>
-                <option value="ar-MA">Arabic (Morocco) (Preview)</option>
-                <option value="ar-OM">Arabic (Oman) (Preview)</option>
-                <option value="ar-QA">Arabic (Qatar) (Preview)</option>
-                <option value="ar-SA">Arabic (Saudi Arabia) (Preview)</option>
-                <option value="ar-PS">Arabic (State of Palestine) (Preview)</option>
-                <option value="ar-SY">Arabic (Syria) (Preview)</option>
-                <option value="ar-TN">Arabic (Tunisia) (Preview)</option>
-                <option value="ar-AE">Arabic (United Arab Emirates) (Preview)</option>
-                <option value="my-MM">Burmese (Myanmar) (Preview)</option>
-                <option value="ar-IQ">Central Kurdish (Iraq) (Preview)</option>
-                <option value="yue-Hant-HK">Chinese, Cantonese (Traditional Hong Kong) (Preview)</option>
-                <option value="cmn-Hant-TW">Chinese, Mandarin (Traditional, Taiwan) (Preview)</option>
-                <option value="cs-CZ">Czech (Czech Republic) (Preview)</option>
-                <option value="en-PH">English (Philippines) (Preview)</option>
-                <option value="et-EE">Estonian (Estonia) (Preview)</option>
-                <option value="id-ID">Indonesian (Indonesia) (Preview)</option>
-                <option value="kn-IN">Kannada (India) (Preview)</option>
-                <option value="kk-KZ">Kazakh (Kazakhstan) (Preview)</option>
-                <option value="km-KH">Khmer (Cambodia) (Preview)</option>
-                <option value="ky-KG">Kyrgyz (Kyrgyzstan) (Preview)</option>
-                <option value="lo-LA">Lao (Laos) (Preview)</option>
-                <option value="lv-LV">Latvian (Latvia) (Preview)</option>
-                <option value="lt-LT">Lithuanian (Lithuania) (Preview)</option>
-                <option value="lb-LU">Luxembourgish (Luxembourg) (Preview)</option>
-                <option value="mk-MK">Macedonian (North Macedonia) (Preview)</option>
-                <option value="ms-MY">Malay (Malaysia) (Preview)</option>
-                <option value="ml-IN">Malayalam (India) (Preview)</option>
-                <option value="mt-MT">Maltese (Malta) (Preview)</option>
-                <option value="mi-NZ">Maori (New Zealand) (Preview)</option>
-                <option value="mr-IN">Marathi (India) (Preview)</option>
-                <option value="mn-MN">Mongolian (Mongolia) (Preview)</option>
-                <option value="ne-NP">Nepali (Nepal) (Preview)</option>
-                <option value="nso-ZA">Northern Sotho (South Africa) (Preview)</option>
-                <option value="no-NO">Norwegian (Norway) (Preview)</option>
-                <option value="or-IN">Oriya (India) (Preview)</option>
-                <option value="fa-IR">Persian (Iran) (Preview)</option>
-                <option value="pa-Guru-IN">Punjabi (Gurmukhi India) (Preview)</option>
-                <option value="sr-RS">Serbian (Serbia) (Preview)</option>
-                <option value="sk-SK">Slovak (Slovakia) (Preview)</option>
-                <option value="sl-SI">Slovenian (Slovenia) (Preview)</option>
-                <option value="es-MX">Spanish (Mexico) (Preview)</option>
-                <option value="sw-KE">Swahili (Kenya) (Preview)</option>
-                <option value="ta-IN">Tamil (India) (Preview)</option>
-                <option value="te-IN">Telugu (India) (Preview)</option>
-                <option value="th-TH">Thai (Thailand) (Preview)</option>
-                <option value="uz-UZ">Uzbek (Uzbekistan) (Preview)</option>
-                <option value="cy-GB">Welsh (United Kingdom) (Preview)</option>
-                <option value="wo-SN">Wolof (Senegal) (Preview)</option>
-                <option value="xh-ZA">Xhosa (South Africa) (Preview)</option>
-                <option value="yo-NG">Yoruba (Nigeria) (Preview)</option>
-                <option value="zu-ZA">Zulu (South Africa) (Preview)</option>
-            </select>
-        </div>
+let playCtx = null;          // playback context (24 kHz)
+let playHead = 0;            // scheduling pointer for gapless playback
 
-        <div>
-            <button id="applyLangBtn" class="nav-btn">Apply Languages</button>
-        </div>
+// Track chat bubbles + accumulated text per (seq,type). The backend streams
+// only deltas; the frontend accumulates them for display and the raw panel.
+const bubbles = {};          // key `${seq}-${type}` -> element
+const acc = {};              // key `${seq}-${type}` -> accumulated string
 
-        <div>
-            <div class="nav-section-label">Playback Mode</div>
-            <select id="playbackMode">
-                <option value="streaming">Streaming</option>
-                <option value="turn_complete" selected>On Turn Complete</option>
-            </select>
-        </div>
+const $ = (id) => document.getElementById(id);
 
-        <div>
-            <div class="nav-section-label">Autoplay</div>
-            <button id="navAutoplayBtn" class="nav-btn">Autoplay: ON</button>
-        </div>
+// ---------------- Config / dropdowns ----------------
+async function loadConfig() {
+  const cfg = await (await fetch('/config')).json();
+  const src = $('sourceLang'), tgt = $('targetLang');
+  for (const lang of cfg.languages) {
+    const label = lang.name + (lang.preview ? '  (Preview)' : '') + ' — ' + lang.code;
+    src.add(new Option(label, lang.code));
+    tgt.add(new Option(label, lang.code));
+  }
+  src.value = cfg.default_source_code;
+  tgt.value = cfg.default_target_code;
 
-        <div>
-            <div class="nav-section-label">Current Mode</div>
-            <span class="status-pill" id="modeStatus">turn_complete</span>
-        </div>
-    </nav>
+  $('modelName').textContent = cfg.model || '';
 
-    <script>
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const navAutoplayBtn = document.getElementById('navAutoplayBtn');
-        const playbackModeSelect = document.getElementById('playbackMode');
-        const modeStatus = document.getElementById('modeStatus');
-        const applyLangBtn = document.getElementById('applyLangBtn');
-        const languageASelect = document.getElementById('languageA');
-        const languageBSelect = document.getElementById('languageB');
-        const chatContainer = document.getElementById('chat-container');
-        const wsStatusEl = document.getElementById('wsStatus');
-        const wsStatusText = document.getElementById('wsStatusText');
-        const liveApiStatusEl = document.getElementById('liveApiStatus');
-        const liveApiStatusText = document.getElementById('liveApiStatusText');
+  const dt = $('denoiseToggle');
+  if (!cfg.denoiser_available) {
+    dt.checked = false; dt.disabled = true;
+    $('denoiseState').textContent = '(unavailable)';
+  } else {
+    dt.checked = !!cfg.denoiser_enabled;
+    $('denoiseState').textContent = '(' + (cfg.denoiser_model || 'on') + ')';
+  }
+}
 
-        let socket;
-        let audioContext;
-        let audioWorkletNode;
-        let input;
-        let globalStream;
-        let recordedChunks = [];
-        let userMessageDiv;
-        let botMessageDiv;
+// ---------------- WebSocket ----------------
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.binaryType = 'arraybuffer';
 
-        // ---------- Playback state ----------
-        // Playback modes:
-        //   'streaming'      : play each audio blob as soon as it arrives.
-        //   'turn_complete'  : buffer all audio chunks for the current turn and
-        //                      play them as one consolidated clip when the
-        //                      backend signals turn_complete.
-        let playbackMode = 'turn_complete';
-        let audioQueue = [];          // queued audio object URLs ready for playback
-        let pendingTurnChunks = [];   // raw PCM ArrayBuffers buffered for current turn
-        // Tracks in-flight arrayBuffer() promises so that turn_complete waits
-        // for all blobs to be decoded before flushing (fixes race condition).
-        let pendingBlobPromises = [];
-        let isPlaying = false;
-        let autoplayEnabled = true;
-        const audioPlayer = new Audio();
+  ws.onopen = () => {
+    setDot('wsDot', 'connected');
+    // Tell the backend the current playback state so it only streams audio when wanted.
+    send({ action: 'set_audio_output', enabled: $('playToggle').checked });
+  };
+  ws.onclose = () => { setDot('wsDot', ''); setDot('apiDot', ''); setTimeout(connectWS, 2000); };
+  ws.onerror = () => setDot('wsDot', 'error');
 
-        // ---------- Sidebar handlers ----------
-        navAutoplayBtn.addEventListener('click', () => {
-            autoplayEnabled = !autoplayEnabled;
-            navAutoplayBtn.textContent = `Autoplay: ${autoplayEnabled ? 'ON' : 'OFF'}`;
-            if (!autoplayEnabled) {
-                audioQueue = [];
-                pendingTurnChunks = [];
-            }
-        });
+  ws.onmessage = (ev) => {
+    if (ev.data instanceof ArrayBuffer) { playAudio(ev.data); return; }
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.kind === 'data') { handleData(msg.data); }
+    else if (msg.kind === 'status' && msg.live_api_status) {
+      setDot('apiDot', msg.live_api_status.state);
+    }
+  };
+}
 
-        playbackModeSelect.addEventListener('change', () => {
-            playbackMode = playbackModeSelect.value;
-            modeStatus.textContent = playbackMode;
-            // When switching to streaming mid-turn, flush buffered chunks immediately.
-            if (playbackMode === 'streaming' && pendingTurnChunks.length > 0) {
-                flushPendingTurn();
-            }
-        });
+function setDot(id, state) {
+  const el = $(id);
+  el.className = 'dot' + (state ? ' ' + state : '');
+}
 
-        audioPlayer.addEventListener('ended', () => {
-            isPlaying = false;
-            playNextInQueue();
-        });
+// ---------------- Data-contract handling ----------------
+function handleData(d) {
+  const key = `${d.seq}-${d.type}`;
+  const finished = (d.finished === true || d.finished === 'true');
 
-        function playNextInQueue() {
-            if (audioQueue.length === 0 || isPlaying || !autoplayEnabled) return;
-            isPlaying = true;
-            const audioURL = audioQueue.shift();
-            audioPlayer.src = audioURL;
-            audioPlayer.play().catch(err => {
-                console.error('Audio playback failed, requeueing:', err);
-                isPlaying = false;
-                audioQueue.unshift(audioURL);
-            });
-        }
+  // Accumulate the delta into the full message for this (seq,type).
+  const text = (acc[key] || '') + (d.delta || '');
+  acc[key] = text;
 
-        function enqueueWavFromPcm(pcmBuffer) {
-            const blob = pcmToWav(pcmBuffer, 24000, 1);
-            audioQueue.push(URL.createObjectURL(blob));
-            playNextInQueue();
-        }
+  // Raw panel — show the documented data format (accumulated `message`).
+  appendRaw('data:' + JSON.stringify({
+    uid: d.uid, seq: d.seq, type: d.type, message: text, finished: finished
+  }));
 
-        function flushPendingTurn() {
-            if (pendingTurnChunks.length === 0) return;
-            const totalLength = pendingTurnChunks.reduce(
-                (acc, chunk) => acc + chunk.byteLength, 0,
-            );
-            const combined = new Uint8Array(totalLength);
-            let offset = 0;
-            for (const chunk of pendingTurnChunks) {
-                combined.set(new Uint8Array(chunk), offset);
-                offset += chunk.byteLength;
-            }
-            pendingTurnChunks = [];
-            enqueueWavFromPcm(combined.buffer);
-        }
+  // Don't create an empty bubble for a bare finished-marker with no text.
+  if (!text && finished) return;
 
-        // ---------- PCM -> WAV helper ----------
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
+  const container = d.type === 1 ? $('inputMsgs') : $('outputMsgs');
+  let el = bubbles[key];
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'bubble pending';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `seq ${d.seq} · ${d.type === 1 ? 'input' : 'translation'}`;
+    const body = document.createElement('div');
+    body.className = 'body';
+    el.appendChild(meta); el.appendChild(body);
+    container.appendChild(el);
+    bubbles[key] = el;
+  }
+  el.querySelector('.body').textContent = text;
+  if (finished) el.classList.remove('pending');
+  container.scrollTop = container.scrollHeight;
+}
 
-        function pcmToWav(pcmData, sampleRate, numChannels) {
-            const header = new ArrayBuffer(44);
-            const view = new DataView(header);
-            const pcmLength = pcmData.byteLength;
-            const totalLength = pcmLength + 44;
+function appendRaw(line) {
+  const log = $('rawLog');
+  log.textContent += line + '\n';
+  log.scrollTop = log.scrollHeight;
+}
 
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, totalLength - 8, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * numChannels * 2, true);
-            view.setUint16(32, numChannels * 2, true);
-            view.setUint16(34, 16, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, pcmLength, true);
+// ---------------- Audio playback (24 kHz PCM) ----------------
+function playAudio(buffer) {
+  if (!$('playToggle').checked) return;   // audio-output toggle
+  if (!playCtx) playCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const int16 = new Int16Array(buffer);
+  if (int16.length === 0) return;
+  const f32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) f32[i] = int16[i] / 32768;
+  const audioBuffer = playCtx.createBuffer(1, f32.length, OUTPUT_SAMPLE_RATE);
+  audioBuffer.getChannelData(0).set(f32);
+  const src = playCtx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(playCtx.destination);
+  const now = playCtx.currentTime;
+  if (playHead < now) playHead = now;
+  src.start(playHead);
+  playHead += audioBuffer.duration;
+}
 
-            const wavBytes = new Uint8Array(totalLength);
-            wavBytes.set(new Uint8Array(header), 0);
-            wavBytes.set(new Uint8Array(pcmData), 44);
-            return new Blob([wavBytes], { type: 'audio/wav' });
-        }
+// ---------------- Recording (mic -> 16 kHz PCM -> WS) ----------------
+async function startRecording() {
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+  });
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
+  await audioCtx.audioWorklet.addModule('/static/audio-processor.js');
+  const source = audioCtx.createMediaStreamSource(micStream);
+  workletNode = new AudioWorkletNode(audioCtx, 'audio-processor');
+  workletNode.port.onmessage = (e) => {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(e.data);
+  };
+  source.connect(workletNode);
+  workletNode.connect(audioCtx.destination);
 
-        // ---------- Chat helpers ----------
-        const createMessageDiv = (className) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', className);
-            const textDiv = document.createElement('div');
-            textDiv.classList.add('message-text');
-            messageDiv.appendChild(textDiv);
-            chatContainer.appendChild(messageDiv);
-            return messageDiv;
-        };
+  send({ action: 'start_session' });
+  recording = true;
+  const btn = $('recBtn');
+  btn.textContent = '■ Stop'; btn.classList.add('recording');
+}
 
-        // ---------- WebSocket status helper ----------
-        const setWsStatus = (state, label) => {
-            if (!wsStatusEl) return;
-            wsStatusEl.classList.remove('connected', 'disconnected', 'connecting');
-            wsStatusEl.classList.add(state);
-            if (wsStatusText) wsStatusText.textContent = label;
-        };
+function stopRecording() {
+  send({ action: 'stop_session' });
+  if (workletNode) { workletNode.disconnect(); workletNode = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  recording = false;
+  const btn = $('recBtn');
+  btn.textContent = '▶ Start'; btn.classList.remove('recording');
+}
 
-        const setLiveApiStatus = (state, label) => {
-            if (!liveApiStatusEl) return;
-            liveApiStatusEl.classList.remove('connected', 'disconnected', 'connecting');
-            liveApiStatusEl.classList.add(state);
-            if (liveApiStatusText) liveApiStatusText.textContent = label;
-        };
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
 
-        const liveApiLabelFor = (state) => {
-            switch (state) {
-                case 'connected':    return 'Connected';
-                case 'connecting':   return 'Connecting…';
-                case 'error':        return 'Error';
-                case 'disconnected':
-                default:             return 'Disconnected';
-            }
-        };
+// ---------------- UI wiring ----------------
+$('recBtn').onclick = async () => {
+  try {
+    if (!recording) await startRecording(); else stopRecording();
+  } catch (err) {
+    alert('Microphone error: ' + err.message);
+  }
+};
 
-        // ---------- WebSocket ----------
-        let wsReconnectTimer = null;
-        const connectWebSocket = () => {
-            setWsStatus('connecting', 'Connecting…');
-            socket = new WebSocket('ws://localhost:8000/ws');
+function sendLanguages() {
+  const s = $('sourceLang'), t = $('targetLang');
+  send({
+    source_language: s.options[s.selectedIndex].text,
+    source_language_code: s.value,
+    target_language: t.options[t.selectedIndex].text,
+    target_language_code: t.value,
+  });
+}
+$('sourceLang').onchange = sendLanguages;
+$('targetLang').onchange = sendLanguages;
 
-            socket.onopen = () => {
-                console.log('WebSocket connection established');
-                setWsStatus('connected', 'Connected');
-            };
-            socket.onclose = () => {
-                console.log('WebSocket connection closed');
-                setWsStatus('disconnected', 'Disconnected');
-                // Without a WebSocket we can't know the Live API state either.
-                setLiveApiStatus('disconnected', 'Unknown');
-                // Attempt to auto-reconnect after a short delay.
-                if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
-                wsReconnectTimer = setTimeout(() => {
-                    wsReconnectTimer = null;
-                    connectWebSocket();
-                }, 2000);
-            };
-            socket.onerror = (err) => {
-                console.error('WebSocket error:', err);
-                setWsStatus('disconnected', 'Error');
-            };
+$('denoiseToggle').onchange = (e) => send({ action: 'set_denoiser', enabled: e.target.checked });
+$('playToggle').onchange = (e) => {
+  send({ action: 'set_audio_output', enabled: e.target.checked });
+  if (!e.target.checked) playHead = 0;  // drop any queued playback when muting
+};
+$('clearRaw').onclick = () => { $('rawLog').textContent = ''; };
 
-            socket.onmessage = (event) => {
-                if (event.data instanceof Blob) {
-                    // Track this promise so turn_complete can wait for all
-                    // in-flight arrayBuffer() resolutions before flushing.
-                    // This prevents the race where turn_complete JSON arrives
-                    // before the last blob's .then() has resolved.
-                    const p = event.data.arrayBuffer().then(buffer => {
-                        // Remove this promise from the pending list.
-                        pendingBlobPromises = pendingBlobPromises.filter(x => x !== p);
-                        if (playbackMode === 'turn_complete') {
-                            pendingTurnChunks.push(buffer);
-                        } else {
-                            enqueueWavFromPcm(buffer);
-                        }
-                    });
-                    pendingBlobPromises.push(p);
-                    return;
-                }
-
-                const data = JSON.parse(event.data);
-
-                if (data.live_api_status) {
-                    const state = data.live_api_status.state || 'disconnected';
-                    setLiveApiStatus(state, liveApiLabelFor(state));
-                }
-
-                if (data.input_transcription) {
-                    if (!userMessageDiv || botMessageDiv) {
-                        userMessageDiv = createMessageDiv('user-message');
-                        botMessageDiv = null;
-                    }
-                    userMessageDiv.querySelector('.message-text').innerHTML += data.input_transcription;
-                }
-
-                if (data.output_transcription) {
-                    if (!botMessageDiv || userMessageDiv) {
-                        botMessageDiv = createMessageDiv('bot-message');
-                        userMessageDiv = null;
-                    }
-                    botMessageDiv.querySelector('.message-text').innerHTML += data.output_transcription;
-                }
-
-                if (data.turn_complete) {
-                    if (playbackMode === 'turn_complete') {
-                        // Wait for all in-flight blob→ArrayBuffer conversions to
-                        // complete before flushing so no chunks are missed.
-                        const snapshotPromises = pendingBlobPromises.slice();
-                        Promise.all(snapshotPromises).then(() => {
-                            flushPendingTurn();
-                        });
-                    }
-                    userMessageDiv = null;
-                    botMessageDiv = null;
-                }
-
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            };
-        };
-
-        // ---------- Recording ----------
-        const startRecording = async () => {
-            recordedChunks = [];
-            userMessageDiv = null;
-            botMessageDiv = null;
-            // Clear any leftover buffered state from a previous turn.
-            pendingTurnChunks = [];
-            pendingBlobPromises = [];
-            try {
-                globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                await audioContext.audioWorklet.addModule('/static/audio-processor.js');
-                audioWorkletNode = new AudioWorkletNode(audioContext, 'audio-processor');
-
-                audioWorkletNode.port.onmessage = (event) => {
-                    if (socket && socket.readyState === WebSocket.OPEN) {
-                        socket.send(event.data);
-                        recordedChunks.push(event.data);
-                    }
-                };
-
-                input = audioContext.createMediaStreamSource(globalStream);
-                input.connect(audioWorkletNode);
-                audioWorkletNode.connect(audioContext.destination);
-
-                // Signal the server to open a new Live API session now.
-                // The WebSocket connection itself remains persistent between recordings.
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ action: 'start_session' }));
-                }
-
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-            } catch (err) {
-                console.error('Error starting recording:', err);
-            }
-        };
-
-        const stopRecording = () => {
-            if (globalStream) globalStream.getTracks().forEach(track => track.stop());
-            if (audioWorkletNode) audioWorkletNode.disconnect();
-            if (input) input.disconnect();
-            if (audioContext) audioContext.close();
-
-            // Signal the server to close the current Live API session so a
-            // fresh one is ready for the next Start Recording press.
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ action: 'stop_session' }));
-            }
-
-            if (userMessageDiv && recordedChunks.length > 0) {
-                const totalLength = recordedChunks.reduce((acc, value) => acc + value.byteLength, 0);
-                const combined = new Uint8Array(totalLength);
-                let offset = 0;
-                for (const chunk of recordedChunks) {
-                    combined.set(new Uint8Array(chunk), offset);
-                    offset += chunk.byteLength;
-                }
-                const blob = pcmToWav(combined.buffer, 16000, 1);
-                const player = document.createElement('audio');
-                player.controls = true;
-                player.src = URL.createObjectURL(blob);
-                userMessageDiv.appendChild(player);
-            }
-
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-        };
-
-        // ---------- Language selection ----------
-        const updateLanguages = () => {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-            const sourceCode = languageASelect.value;
-            const targetCode = languageBSelect.value;
-            const sourceName = languageASelect.options[languageASelect.selectedIndex].text;
-            const targetName = languageBSelect.options[languageBSelect.selectedIndex].text;
-            socket.send(JSON.stringify({
-                source_language: sourceName,
-                source_language_code: sourceCode,
-                target_language: targetName,
-                target_language_code: targetCode,
-            }));
-            const infoDiv = createMessageDiv('bot-message');
-            infoDiv.style.backgroundColor = '#e3f2fd';
-            infoDiv.querySelector('.message-text').innerHTML =
-                `<strong>[Languages updated]</strong><br>A: ${sourceName} [${sourceCode}]<br>B: ${targetName} [${targetCode}]`;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        };
-
-        // ---------- Wire up events ----------
-        startBtn.addEventListener('click', startRecording);
-        stopBtn.addEventListener('click', stopRecording);
-        applyLangBtn.addEventListener('click', updateLanguages);
-
-        connectWebSocket();
-    </script>
+// ---------------- Boot ----------------
+(async () => { await loadConfig(); connectWS(); })();
+</script>
 </body>
 </html>

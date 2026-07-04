@@ -1,11 +1,11 @@
+# ---------------------------------------------------------------------------
+# Main translation app  (Python >= 3.10; tested on Python 3.14)
+# Install into .venv-app:
+#   /opt/homebrew/bin/python3.14 -m venv .venv-app
+#   ./.venv-app/bin/pip install --index-url https://pypi.org/simple -r requirements.txt
+# ---------------------------------------------------------------------------
+google-genai==2.10.0          # latest SDK; needs Python >= 3.10
 fastapi
-uvicorn
-numpy
-torch
-torchaudio
-onnxruntime
-silero-vad
-google-cloud-aiplatform
+uvicorn[standard]
 python-dotenv
-google-genai
-gemini-live-telemetry
+websockets                    # WS server (browser) + client (denoiser sidecar)
