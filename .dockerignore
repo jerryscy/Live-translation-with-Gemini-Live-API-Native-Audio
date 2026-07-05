@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+.venv-app/
+myenv/
+venv/
+env/
+
+# Debug / diagnostic scripts (not needed at runtime)
+diagnose.py
+diagnose_*.py
+
+# Git & CI
+.git/
+.gitignore
+
+# Secrets & local config (env is provided via Cloud Run --set-env-vars)
+.env
+.env.*
+
+# Docs (not needed in the runtime image)
+*.md
+
+# Python cache / build junk
+__pycache__/
+*.py[cod]
+*.so
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Archives / scratch
+*.zip
+*.wav
+*.log
+run.sh

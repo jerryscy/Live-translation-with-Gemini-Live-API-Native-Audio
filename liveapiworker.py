@@ -25,6 +25,7 @@ from google.genai.types import (
     ActivityHandling,
     StartSensitivity,
     EndSensitivity,
+    SessionResumptionConfig,
 )
 
 
@@ -33,6 +34,25 @@ load_dotenv(override=True)  # .env wins over inherited env (e.g. GOOGLE_CLOUD_LO
 # When true, print each Live API server_content (input/output text + turn flag)
 # with a timestamp so we can inspect streaming granularity. Toggle via .env.
 DEBUG_LIVE_API = os.getenv("DEBUG_LIVE_API", "false").lower() in ("1", "true", "yes", "on")
+
+
+def _is_connection_closed(exc: BaseException) -> bool:
+    """True if the exception (or its cause/context chain) is a closed WebSocket.
+
+    Native-audio Live API sessions have a hard time limit (~10 min). When the
+    server ends the connection, ``session.receive()`` raises a websockets
+    ``ConnectionClosed``. We detect it by class name so we don't couple to a
+    specific websockets version, then trigger a resume-reconnect.
+    """
+    seen: set[int] = set()
+    e: BaseException | None = exc
+    while e is not None and id(e) not in seen:
+        seen.add(id(e))
+        name = type(e).__name__
+        if "ConnectionClosed" in name or "ConnectionError" in name:
+            return True
+        e = e.__cause__ or e.__context__
+    return False
 
 
 SYSTEM_PROMPT_TEMPLATE = """
@@ -72,8 +92,7 @@ class LiveAPIWorker:
     def __init__(self, source_language: str = "English (United States)",
                  target_language: str = "Chinese (Simplified, China)",
                  source_language_code: Optional[str] = None,
-                 target_language_code: Optional[str] = None,
-                 denoiser=None):
+                 target_language_code: Optional[str] = None):
         project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
         location = os.getenv("GOOGLE_CLOUD_LOCATION")
         if not project_id or not location:
@@ -124,11 +143,15 @@ class LiveAPIWorker:
                 language_codes=[self.target_language_code]
             ),
 
-            # Proactive audio: lets the model start speaking as soon as it has
-            # enough context, instead of waiting for a complete user turn.
-            # Combined with low silence_duration_ms below this delivers the
-            # near-real-time "interpreter" feel.
-            proactivity=ProactivityConfig(proactive_audio=True),
+            # Proactive audio OFF: the model waits until the user finishes a
+            # turn before translating. This is required for the half-duplex
+            # anti-feedback design — with proactive audio ON the model starts
+            # speaking mid-utterance, the client's mic gate (which mutes the mic
+            # during playback) then cuts off the rest of the user's speech, and
+            # the input transcription never finalizes. Waiting for turn end
+            # guarantees the full utterance is captured (input transcription
+            # works) before any output/gating begins.
+            proactivity=ProactivityConfig(proactive_audio=False),
 
             # ---------------- Realtime input / VAD ----------------
             # Voice Activity Detection runs server-side on the streamed PCM
@@ -210,6 +233,11 @@ class LiveAPIWorker:
                 ),
             ),
 
+            # Enable session resumption so the session survives the native-audio
+            # time limit (~10 min). The handle is injected fresh before each
+            # connect() in run(); an empty handle here starts a resumable session.
+            session_resumption=SessionResumptionConfig(),
+
             # System prompt that turns the model into a translation conduit
             # (see SYSTEM_PROMPT_TEMPLATE at the top of this file).
             system_instruction=self.system_instruction,
@@ -259,10 +287,6 @@ class LiveAPIWorker:
         # state and so status changes can be broadcast as events.
         self.live_api_connected: bool = False
 
-        # ---- DeepFilterNet2 denoiser (applied to incoming mic audio) ----
-        # May be None if denoising is unavailable. Toggled live from the UI.
-        self.denoiser = denoiser
-
         # When False, translated audio is NOT sent to the browser (saves the
         # WebSocket bandwidth + browser decode when playback is muted, keeping
         # the socket clear for low-latency text streaming). Toggled from the UI.
@@ -278,6 +302,14 @@ class LiveAPIWorker:
         self._paused: bool = True            # audio not forwarded while paused
         self._stopped_at: float = 0.0        # monotonic time Stop was pressed
         self._idle_close_seconds: float = float(os.getenv("IDLE_CLOSE_SECONDS", "30"))
+
+        # ---- Session resumption (survive the ~10 min native-audio limit) ----
+        # The server periodically sends a resumption handle; we keep the latest
+        # one and reconnect with it when the session hits its time limit (or the
+        # server sends GoAway), so translation continues seamlessly with context
+        # preserved and WITHOUT requiring the user to press Start again.
+        self._resume_handle: Optional[str] = None   # latest resumption handle
+        self._resume_reconnect: bool = False        # reconnect due to limit/GoAway
 
         # ---- Data-contract state (uid / seq / accumulation per turn) ----
         # uid   : identifies one recording session (a new one per Start press).
@@ -311,6 +343,10 @@ class LiveAPIWorker:
         self.session_uid = str(uuid.uuid4())
         self.seq = 1
         self._reset_turn_state()
+        # A new browser = a fresh conversation: drop any old resumption handle
+        # so we don't try to resume a previous client's session context.
+        self._resume_handle = None
+        self._resume_reconnect = False
         print(f"New client session. uid={self.session_uid}")
 
     async def start_session(self) -> None:
@@ -335,11 +371,6 @@ class LiveAPIWorker:
         self._t1_has = False
         self._t2_has = False
         self._t1_final = False
-
-    def set_denoiser_enabled(self, enabled: bool) -> None:
-        """Toggle the DeepFilterNet denoiser at runtime (live A/B comparison)."""
-        if self.denoiser is not None:
-            self.denoiser.set_enabled(enabled)
 
     def set_audio_output(self, enabled: bool) -> None:
         """Toggle whether translated audio is streamed to the browser."""
@@ -383,7 +414,9 @@ class LiveAPIWorker:
             # The same configuration is rebuilt here so that a language change
             # (which updates the transcription language codes and the system
             # prompt) takes effect on the next Live API session.
-            proactivity=ProactivityConfig(proactive_audio=True),
+            # proactive_audio OFF — see constructor for the rationale (half-duplex
+            # anti-feedback: wait for the full user turn before translating).
+            proactivity=ProactivityConfig(proactive_audio=False),
             realtime_input_config=RealtimeInputConfig(
                 automatic_activity_detection=AutomaticActivityDetection(
                     # Server-side VAD enabled.
@@ -400,7 +433,7 @@ class LiveAPIWorker:
                     # Minimum speech duration before a turn officially starts.
                     prefix_padding_ms=30,
                     # Minimum trailing silence before a turn officially ends.
-                    silence_duration_ms=0,
+                    silence_duration_ms=50,
                 ),
                 # NO_INTERRUPTION: new speech never truncates an in-progress
                 # translation (see constructor above for details).
@@ -417,6 +450,8 @@ class LiveAPIWorker:
             context_window_compression=ContextWindowCompressionConfig(
                 sliding_window=SlidingWindow(target_tokens=8192),
             ),
+            # See constructor: resumable session; handle injected before connect().
+            session_resumption=SessionResumptionConfig(),
             system_instruction=self.system_instruction,
         )
 
@@ -443,14 +478,7 @@ class LiveAPIWorker:
     # ------------------------------------------------------------------
 
     async def _sender_task(self, session) -> None:
-        """Pull audio chunks from the input queue, denoise, and forward them.
-
-        DeepFilterNet runs in a separate Python 3.9 sidecar process (it needs a
-        native lib + numpy<2 that can't live in this interpreter). The denoiser
-        client streams each chunk to the sidecar over a local WebSocket and
-        gets the denoised chunk back. When the denoiser is disabled the client
-        returns the bytes unchanged (no sidecar round-trip).
-        """
+        """Pull audio chunks from the input queue and forward them to the API."""
         while True:
             audio_chunk = await self._audio_input_queue.get()
             if audio_chunk is None:          # graceful stop sentinel
@@ -459,8 +487,6 @@ class LiveAPIWorker:
             try:
                 if self._paused:
                     continue  # Stop pressed — drop audio, keep session alive
-                if self.denoiser is not None and self.denoiser.enabled:
-                    audio_chunk = await self.denoiser.process(audio_chunk)
                 await session.send_realtime_input(
                     audio=Blob(data=audio_chunk, mime_type="audio/pcm;rate=16000")
                 )
@@ -499,6 +525,21 @@ class LiveAPIWorker:
         # `async for ... session.receive()` loop would consume messages this
         # loop never sees (dropping transcriptions from the frontend).
         async for message in session.receive():
+            # ---- Session resumption handle (may arrive with no content) ----
+            sru = getattr(message, "session_resumption_update", None)
+            if sru is not None and getattr(sru, "resumable", False) and getattr(sru, "new_handle", None):
+                self._resume_handle = sru.new_handle
+                if DEBUG_LIVE_API:
+                    print(f"[resume] handle updated (...{self._resume_handle[-8:]})")
+
+            # ---- GoAway: server is about to close (e.g. session time limit) ----
+            go_away = getattr(message, "go_away", None)
+            if go_away is not None:
+                time_left = getattr(go_away, "time_left", None)
+                print(f"[resume] GoAway (time_left={time_left}); reconnecting to resume.")
+                self._resume_reconnect = True
+                return  # stop reading; run() will reconnect with the handle
+
             server_content = getattr(message, "server_content", None)
             if not server_content:
                 continue
@@ -587,7 +628,8 @@ class LiveAPIWorker:
         is restarted; cancellation (stop / language change / shutdown) cancels
         the in-flight child receiver and exits.
         """
-        while not self._intentional_stop and not self._restart_requested:
+        while (not self._intentional_stop and not self._restart_requested
+               and not self._resume_reconnect):
             self._current_receiver = asyncio.create_task(
                 self._receiver_task(session), name="live-api-receiver"
             )
@@ -601,6 +643,15 @@ class LiveAPIWorker:
                     await asyncio.gather(self._current_receiver, return_exceptions=True)
                 raise
             except Exception as exc:
+                # A closed connection (e.g. the ~10 min session limit) is not a
+                # transient error — trigger a resume-reconnect instead of hot-
+                # looping on a dead session.
+                if (_is_connection_closed(exc)
+                        and not (self._intentional_stop or self._restart_requested)):
+                    print(f"[resume] Session closed ({type(exc).__name__}); "
+                          "reconnecting to resume.")
+                    self._resume_reconnect = True
+                    break
                 print(f"[receiver] Error: {exc}. Restarting receiver...")
                 await asyncio.sleep(0.1)  # tiny backoff to avoid a hot error loop
 
@@ -629,13 +680,17 @@ class LiveAPIWorker:
             # If a language change requested a restart, _start_event is still
             # set so this wait returns immediately and we reconnect with the
             # freshly-built config without requiring another button press.
+            resuming = self._resume_reconnect
             if self._restart_requested:
                 print("Reconnecting Live API with updated language codes...")
+            elif resuming:
+                print("Resuming Live API session (time-limit rollover)...")
             else:
                 print("Waiting for Start Recording signal...")
             await self._start_event.wait()
             self._intentional_stop = False
             self._restart_requested = False
+            self._resume_reconnect = False
 
 
             # Drain any stale audio left from a previous session.
@@ -647,7 +702,16 @@ class LiveAPIWorker:
                     break
 
             try:
-                print("Establishing connection with Live API...")
+                # Inject the latest resumption handle so a reconnect resumes the
+                # previous session (context preserved). None = fresh session.
+                self.config.session_resumption = SessionResumptionConfig(
+                    handle=self._resume_handle
+                )
+                if self._resume_handle:
+                    print(f"Establishing connection with Live API "
+                          f"(resuming ...{self._resume_handle[-8:]})...")
+                else:
+                    print("Establishing connection with Live API...")
                 await self.event_queue.put(
                     {"type": "live_api_status", "connected": False, "state": "connecting"}
                 )
@@ -718,6 +782,10 @@ class LiveAPIWorker:
                 await self.event_queue.put(
                     {"type": "live_api_status", "connected": False, "state": "error"}
                 )
+                # Drop a possibly-stale/expired resumption handle so the next
+                # attempt starts a fresh session instead of failing repeatedly.
+                self._resume_handle = None
+                self._resume_reconnect = False
                 self._start_event.clear()   # require a new Start Recording press
                 await asyncio.sleep(3)
                 continue

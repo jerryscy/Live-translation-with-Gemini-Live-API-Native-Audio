@@ -8,4 +8,7 @@ google-genai==2.10.0          # latest SDK; needs Python >= 3.10
 fastapi
 uvicorn[standard]
 python-dotenv
-websockets                    # WS server (browser) + client (denoiser sidecar)
+websockets                    # WebSocket server (browser <-> backend)
+authlib                       # Google OAuth (OpenID Connect) login flow
+itsdangerous                  # signs the session cookie (SessionMiddleware)
+httpx                         # async HTTP client used by authlib for OIDC

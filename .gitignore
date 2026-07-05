@@ -20,8 +20,17 @@ __pycache__/
 *.log
 diagnose_*.log
 
+# Throwaway scratch scripts (kept out of the repo)
+_*.py
+
 # Audio scratch files
 *.wav
+
+# Archives
+*.zip
+
+# Cowork task-plan bookkeeping
+plan.md
 
 # IDE / editor
 .vscode/

@@ -69,7 +69,6 @@ async def main():
     worker = LiveAPIWorker(
         "Mandarin Chinese (China)", "English (United States)",
         source_language_code="cmn-CN", target_language_code="en-US",
-        denoiser=None,  # isolate transcription streaming from denoising
     )
     run_task = asyncio.create_task(worker.run())
     stop = asyncio.Event()

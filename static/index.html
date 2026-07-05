@@ -33,6 +33,15 @@
   .dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
   .dot.connecting { background: #eab308; }
   .dot.error { background: var(--danger); }
+  .authbox { gap: 10px; }
+  .authuser { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .authavatar { width: 20px; height: 20px; border-radius: 50%; background: #2563eb;
+    color: #fff; font-size: 11px; font-weight: 600; display: inline-flex;
+    align-items: center; justify-content: center; text-transform: uppercase; }
+  #authUser { color: #cbd5e1; }
+  .logout { color: var(--muted); text-decoration: none; border: 1px solid #3a3a3a;
+    padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+  .logout:hover { color: #fff; border-color: #666; }
 
   .controls {
     padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
@@ -109,6 +118,10 @@
     <div class="spacer"></div>
     <div class="status"><span id="wsDot" class="dot"></span> Server</div>
     <div class="status"><span id="apiDot" class="dot"></span> Live API</div>
+    <div id="authBox" class="status authbox" style="display:none">
+      <span class="authuser"><span class="authavatar" id="authAvatar"></span><span id="authUser"></span></span>
+      <a id="logoutLink" class="logout" href="/logout">Sign out</a>
+    </div>
   </header>
 
   <div class="controls">
@@ -128,10 +141,6 @@
       Play audio
     </label>
 
-    <label class="toggle" title="Toggle DeepFilterNet2 denoising in real time for A/B comparison">
-      <span class="switch"><input type="checkbox" id="denoiseToggle"><span class="slider"></span></span>
-      DeepFilterNet2 <span id="denoiseState" style="color:var(--muted);font-size:11px;"></span>
-    </label>
   </div>
 
   <main>
@@ -171,6 +180,18 @@ let recording = false;
 let playCtx = null;          // playback context (24 kHz)
 let playHead = 0;            // scheduling pointer for gapless playback
 
+// ---- Half-duplex mic gating (anti-feedback) ----
+// While the translated audio is playing through the speakers we STOP sending
+// mic audio, so the model never hears (and gets confused/interrupted by) its
+// own output leaking back through the microphone. We track the gate with a
+// wall-clock timestamp (performance.now(), which always advances) so it can
+// never get stuck if the AudioContext gets suspended.
+let micGatedUntilMs = 0;
+const MIC_GATE_GUARD_MS = 350; // extra ms after playback ends (acoustic tail)
+function micIsGated() {
+  return performance.now() < micGatedUntilMs;
+}
+
 // Track chat bubbles + accumulated text per (seq,type). The backend streams
 // only deltas; the frontend accumulates them for display and the raw panel.
 const bubbles = {};          // key `${seq}-${type}` -> element
@@ -192,14 +213,6 @@ async function loadConfig() {
 
   $('modelName').textContent = cfg.model || '';
 
-  const dt = $('denoiseToggle');
-  if (!cfg.denoiser_available) {
-    dt.checked = false; dt.disabled = true;
-    $('denoiseState').textContent = '(unavailable)';
-  } else {
-    dt.checked = !!cfg.denoiser_enabled;
-    $('denoiseState').textContent = '(' + (cfg.denoiser_model || 'on') + ')';
-  }
 }
 
 // ---------------- WebSocket ----------------
@@ -291,6 +304,10 @@ function playAudio(buffer) {
   if (playHead < now) playHead = now;
   src.start(playHead);
   playHead += audioBuffer.duration;
+  // Gate the mic for the remaining scheduled playback (+ a short tail) so the
+  // speaker output doesn't feed back into the microphone. Wall-clock based.
+  const remainingMs = Math.max(0, (playHead - playCtx.currentTime) * 1000);
+  micGatedUntilMs = Math.max(micGatedUntilMs, performance.now() + remainingMs + MIC_GATE_GUARD_MS);
 }
 
 // ---------------- Recording (mic -> 16 kHz PCM -> WS) ----------------
@@ -303,6 +320,7 @@ async function startRecording() {
   const source = audioCtx.createMediaStreamSource(micStream);
   workletNode = new AudioWorkletNode(audioCtx, 'audio-processor');
   workletNode.port.onmessage = (e) => {
+    if (micIsGated()) return;   // half-duplex: don't send mic while output plays
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(e.data);
   };
   source.connect(workletNode);
@@ -349,15 +367,27 @@ function sendLanguages() {
 $('sourceLang').onchange = sendLanguages;
 $('targetLang').onchange = sendLanguages;
 
-$('denoiseToggle').onchange = (e) => send({ action: 'set_denoiser', enabled: e.target.checked });
 $('playToggle').onchange = (e) => {
   send({ action: 'set_audio_output', enabled: e.target.checked });
   if (!e.target.checked) playHead = 0;  // drop any queued playback when muting
 };
 $('clearRaw').onclick = () => { $('rawLog').textContent = ''; };
 
+// ---------------- Auth header ----------------
+async function loadAuth() {
+  try {
+    const me = await (await fetch('/me')).json();
+    if (!me.auth_enabled) return;              // auth off: no header shown
+    const email = me.email || '';
+    if (!email) return;
+    $('authUser').textContent = email;
+    $('authAvatar').textContent = (me.name || email).trim().charAt(0) || '?';
+    $('authBox').style.display = 'flex';
+  } catch (e) { /* non-fatal */ }
+}
+
 // ---------------- Boot ----------------
-(async () => { await loadConfig(); connectWS(); })();
+(async () => { await loadAuth(); await loadConfig(); connectWS(); })();
 </script>
 </body>
 </html>
